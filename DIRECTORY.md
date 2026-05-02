@@ -9,7 +9,6 @@
         - 📄 [BackendApplication.java](backend/src/main/java/vaultWeb/BackendApplication.java)
         - 📁 **config**
           - 📄 [CorsConfig.java](backend/src/main/java/vaultWeb/config/CorsConfig.java)
-          - 📄 [EncryptionConfig.java](backend/src/main/java/vaultWeb/config/EncryptionConfig.java)
           - 📄 [OpenApiConfig.java](backend/src/main/java/vaultWeb/config/OpenApiConfig.java)
           - 📄 [SecurityConfig.java](backend/src/main/java/vaultWeb/config/SecurityConfig.java)
           - 📁 **websocket**
@@ -18,12 +17,18 @@
         - 📁 **controllers**
           - 📄 [ChatController.java](backend/src/main/java/vaultWeb/controllers/ChatController.java)
           - 📄 [DashboardController.java](backend/src/main/java/vaultWeb/controllers/DashboardController.java)
+          - 📄 [DeviceController.java](backend/src/main/java/vaultWeb/controllers/DeviceController.java)
           - 📄 [GroupController.java](backend/src/main/java/vaultWeb/controllers/GroupController.java)
           - 📄 [PollController.java](backend/src/main/java/vaultWeb/controllers/PollController.java)
           - 📄 [PrivateChatController.java](backend/src/main/java/vaultWeb/controllers/PrivateChatController.java)
           - 📄 [UserController.java](backend/src/main/java/vaultWeb/controllers/UserController.java)
         - 📁 **dtos**
+          - 📄 [BatchOperationDto.java](backend/src/main/java/vaultWeb/dtos/BatchOperationDto.java)
           - 📄 [ChatMessageDto.java](backend/src/main/java/vaultWeb/dtos/ChatMessageDto.java)
+          - 📄 [ClearChatRequestDto.java](backend/src/main/java/vaultWeb/dtos/ClearChatRequestDto.java)
+          - 📄 [CreateGroupFromChatsRequest.java](backend/src/main/java/vaultWeb/dtos/CreateGroupFromChatsRequest.java)
+          - 📄 [DeviceDto.java](backend/src/main/java/vaultWeb/dtos/DeviceDto.java)
+          - 📄 [DeviceRegistrationRequest.java](backend/src/main/java/vaultWeb/dtos/DeviceRegistrationRequest.java)
           - 📄 [GroupDto.java](backend/src/main/java/vaultWeb/dtos/GroupDto.java)
           - 📄 [PollRequestDto.java](backend/src/main/java/vaultWeb/dtos/PollRequestDto.java)
           - 📄 [PollResponseDto.java](backend/src/main/java/vaultWeb/dtos/PollResponseDto.java)
@@ -32,12 +37,14 @@
             - 📄 [UserDashboardDto.java](backend/src/main/java/vaultWeb/dtos/dashboard/UserDashboardDto.java)
           - 📁 **user**
             - 📄 [ChangePasswordRequest.java](backend/src/main/java/vaultWeb/dtos/user/ChangePasswordRequest.java)
+            - 📄 [LoginRequest.java](backend/src/main/java/vaultWeb/dtos/user/LoginRequest.java)
             - 📄 [UserDto.java](backend/src/main/java/vaultWeb/dtos/user/UserDto.java)
             - 📄 [UserResponseDto.java](backend/src/main/java/vaultWeb/dtos/user/UserResponseDto.java)
         - 📁 **exceptions**
           - 📄 [AdminAccessDeniedException.java](backend/src/main/java/vaultWeb/exceptions/AdminAccessDeniedException.java)
           - 📄 [AlreadyMemberException.java](backend/src/main/java/vaultWeb/exceptions/AlreadyMemberException.java)
           - 📄 [AlreadyVotedException.java](backend/src/main/java/vaultWeb/exceptions/AlreadyVotedException.java)
+          - 📄 [ApiErrorResponse.java](backend/src/main/java/vaultWeb/exceptions/ApiErrorResponse.java)
           - 📄 [DecryptionFailedException.java](backend/src/main/java/vaultWeb/exceptions/DecryptionFailedException.java)
           - 📄 [DuplicateUsernameException.java](backend/src/main/java/vaultWeb/exceptions/DuplicateUsernameException.java)
           - 📄 [EncryptionFailedException.java](backend/src/main/java/vaultWeb/exceptions/EncryptionFailedException.java)
@@ -45,53 +52,96 @@
           - 📄 [LastAdminException.java](backend/src/main/java/vaultWeb/exceptions/LastAdminException.java)
           - 📄 [PollDoesNotBelongToGroupException.java](backend/src/main/java/vaultWeb/exceptions/PollDoesNotBelongToGroupException.java)
           - 📄 [PollOptionNotFoundException.java](backend/src/main/java/vaultWeb/exceptions/PollOptionNotFoundException.java)
+          - 📄 [RateLimitExceededException.java](backend/src/main/java/vaultWeb/exceptions/RateLimitExceededException.java)
           - 📄 [UnauthorizedException.java](backend/src/main/java/vaultWeb/exceptions/UnauthorizedException.java)
           - 📁 **notfound**
             - 📄 [GroupNotFoundException.java](backend/src/main/java/vaultWeb/exceptions/notfound/GroupNotFoundException.java)
             - 📄 [NotMemberException.java](backend/src/main/java/vaultWeb/exceptions/notfound/NotMemberException.java)
             - 📄 [PollNotFoundException.java](backend/src/main/java/vaultWeb/exceptions/notfound/PollNotFoundException.java)
+            - 📄 [PrivateChatNotFoundException.java](backend/src/main/java/vaultWeb/exceptions/notfound/PrivateChatNotFoundException.java)
             - 📄 [UserNotFoundException.java](backend/src/main/java/vaultWeb/exceptions/notfound/UserNotFoundException.java)
         - 📁 **models**
           - 📄 [ChatMessage.java](backend/src/main/java/vaultWeb/models/ChatMessage.java)
+          - 📄 [Device.java](backend/src/main/java/vaultWeb/models/Device.java)
           - 📄 [Group.java](backend/src/main/java/vaultWeb/models/Group.java)
           - 📄 [GroupMember.java](backend/src/main/java/vaultWeb/models/GroupMember.java)
           - 📄 [Poll.java](backend/src/main/java/vaultWeb/models/Poll.java)
           - 📄 [PollOption.java](backend/src/main/java/vaultWeb/models/PollOption.java)
           - 📄 [PollVote.java](backend/src/main/java/vaultWeb/models/PollVote.java)
           - 📄 [PrivateChat.java](backend/src/main/java/vaultWeb/models/PrivateChat.java)
+          - 📄 [RefreshToken.java](backend/src/main/java/vaultWeb/models/RefreshToken.java)
           - 📄 [User.java](backend/src/main/java/vaultWeb/models/User.java)
           - 📁 **enums**
             - 📄 [Role.java](backend/src/main/java/vaultWeb/models/enums/Role.java)
         - 📁 **repositories**
           - 📄 [ChatMessageRepository.java](backend/src/main/java/vaultWeb/repositories/ChatMessageRepository.java)
+          - 📄 [DeviceRepository.java](backend/src/main/java/vaultWeb/repositories/DeviceRepository.java)
           - 📄 [GroupMemberRepository.java](backend/src/main/java/vaultWeb/repositories/GroupMemberRepository.java)
           - 📄 [GroupRepository.java](backend/src/main/java/vaultWeb/repositories/GroupRepository.java)
           - 📄 [PollRepository.java](backend/src/main/java/vaultWeb/repositories/PollRepository.java)
           - 📄 [PollVoteRepository.java](backend/src/main/java/vaultWeb/repositories/PollVoteRepository.java)
           - 📄 [PrivateChatRepository.java](backend/src/main/java/vaultWeb/repositories/PrivateChatRepository.java)
+          - 📄 [RefreshTokenRepository.java](backend/src/main/java/vaultWeb/repositories/RefreshTokenRepository.java)
           - 📄 [UserRepository.java](backend/src/main/java/vaultWeb/repositories/UserRepository.java)
         - 📁 **security**
-          - 📄 [EncryptionUtil.java](backend/src/main/java/vaultWeb/security/EncryptionUtil.java)
           - 📄 [JwtAuthFilter.java](backend/src/main/java/vaultWeb/security/JwtAuthFilter.java)
+          - 📄 [JwtAuthenticationEntryPoint.java](backend/src/main/java/vaultWeb/security/JwtAuthenticationEntryPoint.java)
           - 📄 [JwtUtil.java](backend/src/main/java/vaultWeb/security/JwtUtil.java)
+          - 📄 [RateLimitFilter.java](backend/src/main/java/vaultWeb/security/RateLimitFilter.java)
+          - 📄 [TokenHashUtil.java](backend/src/main/java/vaultWeb/security/TokenHashUtil.java)
           - 📁 **annotations**
             - 📄 [AdminOnly.java](backend/src/main/java/vaultWeb/security/annotations/AdminOnly.java)
+            - 📄 [ApiRateLimit.java](backend/src/main/java/vaultWeb/security/annotations/ApiRateLimit.java)
+            - 📄 [AuditSecurityEvent.java](backend/src/main/java/vaultWeb/security/annotations/AuditSecurityEvent.java)
+            - 📄 [SecurityEventType.java](backend/src/main/java/vaultWeb/security/annotations/SecurityEventType.java)
           - 📁 **aspects**
             - 📄 [AdminOnlyAspect.java](backend/src/main/java/vaultWeb/security/aspects/AdminOnlyAspect.java)
+            - 📄 [RateLimitAspect.java](backend/src/main/java/vaultWeb/security/aspects/RateLimitAspect.java)
+            - 📄 [SecurityAuditAspect.java](backend/src/main/java/vaultWeb/security/aspects/SecurityAuditAspect.java)
+          - 📁 **exception**
+            - 📄 [JwtAuthenticationException.java](backend/src/main/java/vaultWeb/security/exception/JwtAuthenticationException.java)
         - 📁 **services**
           - 📄 [ChatService.java](backend/src/main/java/vaultWeb/services/ChatService.java)
           - 📄 [DashboardService.java](backend/src/main/java/vaultWeb/services/DashboardService.java)
+          - 📄 [DeviceService.java](backend/src/main/java/vaultWeb/services/DeviceService.java)
           - 📄 [GroupService.java](backend/src/main/java/vaultWeb/services/GroupService.java)
           - 📄 [PollService.java](backend/src/main/java/vaultWeb/services/PollService.java)
           - 📄 [PrivateChatService.java](backend/src/main/java/vaultWeb/services/PrivateChatService.java)
           - 📄 [UserService.java](backend/src/main/java/vaultWeb/services/UserService.java)
           - 📁 **auth**
             - 📄 [AuthService.java](backend/src/main/java/vaultWeb/services/auth/AuthService.java)
+            - 📄 [LoginResult.java](backend/src/main/java/vaultWeb/services/auth/LoginResult.java)
             - 📄 [MyUserDetailsService.java](backend/src/main/java/vaultWeb/services/auth/MyUserDetailsService.java)
+            - 📄 [RefreshTokenCleanupService.java](backend/src/main/java/vaultWeb/services/auth/RefreshTokenCleanupService.java)
+            - 📄 [RefreshTokenService.java](backend/src/main/java/vaultWeb/services/auth/RefreshTokenService.java)
   - 📁 **test**
     - 📁 **java**
       - 📁 **vaultWeb**
         - 📄 [BackendApplicationTests.java](backend/src/test/java/vaultWeb/BackendApplicationTests.java)
+        - 📁 **controllers**
+          - 📄 [DashboardControllerTest.java](backend/src/test/java/vaultWeb/controllers/DashboardControllerTest.java)
+          - 📄 [GroupControllerTest.java](backend/src/test/java/vaultWeb/controllers/GroupControllerTest.java)
+          - 📄 [PrivateChatControllerTest.java](backend/src/test/java/vaultWeb/controllers/PrivateChatControllerTest.java)
+          - 📄 [UserControllerTest.java](backend/src/test/java/vaultWeb/controllers/UserControllerTest.java)
+        - 📁 **integration**
+          - 📄 [IntegrationTestBase.java](backend/src/test/java/vaultWeb/integration/IntegrationTestBase.java)
+          - 📄 [SecurityAuditIntegrationTest.java](backend/src/test/java/vaultWeb/integration/SecurityAuditIntegrationTest.java)
+          - 📄 [UserControllerIntegrationTest.java](backend/src/test/java/vaultWeb/integration/UserControllerIntegrationTest.java)
+        - 📁 **security**
+          - 📁 **aspects**
+            - 📄 [RateLimitAspectTest.java](backend/src/test/java/vaultWeb/security/aspects/RateLimitAspectTest.java)
+            - 📄 [SecurityAuditAspectTest.java](backend/src/test/java/vaultWeb/security/aspects/SecurityAuditAspectTest.java)
+        - 📁 **services**
+          - 📄 [ChatServiceTest.java](backend/src/test/java/vaultWeb/services/ChatServiceTest.java)
+          - 📄 [GroupServiceTest.java](backend/src/test/java/vaultWeb/services/GroupServiceTest.java)
+          - 📄 [PrivateChatServiceTest.java](backend/src/test/java/vaultWeb/services/PrivateChatServiceTest.java)
+          - 📄 [UserServiceTest.java](backend/src/test/java/vaultWeb/services/UserServiceTest.java)
+          - 📁 **auth**
+            - 📄 [AuthServiceTest.java](backend/src/test/java/vaultWeb/services/auth/AuthServiceTest.java)
+        - 📁 **support**
+          - 📄 [TestJwtUtil.java](backend/src/test/java/vaultWeb/support/TestJwtUtil.java)
+        - 📁 **validation**
+          - 📄 [UserDtoValidationTest.java](backend/src/test/java/vaultWeb/validation/UserDtoValidationTest.java)
 
 ## frontend
 
@@ -103,14 +153,29 @@
     - 📄 [app.config.ts](frontend/src/app/app.config.ts)
     - 📄 [app.routes.ts](frontend/src/app/app.routes.ts)
     - 📄 [auth.guard.ts](frontend/src/app/auth.guard.ts)
+    - 📁 **config**
+      - 📄 [external-domains.config.ts](frontend/src/app/config/external-domains.config.ts)
     - 📁 **core**
       - 📁 **interceptors**
         - 📄 [token.interceptor.ts](frontend/src/app/core/interceptors/token.interceptor.ts)
+      - 📁 **services**
+        - 📄 [network-status.service.ts](frontend/src/app/core/services/network-status.service.ts)
+        - 📄 [ui-toast.service.ts](frontend/src/app/core/services/ui-toast.service.ts)
+      - 📁 **utils**
+        - 📄 [api-error.util.ts](frontend/src/app/core/utils/api-error.util.ts)
     - 📁 **models**
       - 📁 **dtos**
+        - 📄 [BatchOperationResponse.ts](frontend/src/app/models/dtos/BatchOperationResponse.ts)
         - 📄 [ChatMessageDto.ts](frontend/src/app/models/dtos/ChatMessageDto.ts)
+        - 📄 [ClearChatRequestDto.ts](frontend/src/app/models/dtos/ClearChatRequestDto.ts)
+        - 📄 [CreateGroupFromChatsRequest.ts](frontend/src/app/models/dtos/CreateGroupFromChatsRequest.ts)
+        - 📄 [DeviceDto.ts](frontend/src/app/models/dtos/DeviceDto.ts)
         - 📄 [FileDto.ts](frontend/src/app/models/dtos/FileDto.ts)
         - 📄 [FolderDto.ts](frontend/src/app/models/dtos/FolderDto.ts)
+        - 📄 [FolderListItemDto.ts](frontend/src/app/models/dtos/FolderListItemDto.ts)
+        - 📄 [PasswordEntryCreateRequestDto.ts](frontend/src/app/models/dtos/PasswordEntryCreateRequestDto.ts)
+        - 📄 [PasswordEntryDto.ts](frontend/src/app/models/dtos/PasswordEntryDto.ts)
+        - 📄 [PasswordRevealResponseDto.ts](frontend/src/app/models/dtos/PasswordRevealResponseDto.ts)
         - 📄 [PrivateChatDto.ts](frontend/src/app/models/dtos/PrivateChatDto.ts)
         - 📄 [UserDashboardDto.ts](frontend/src/app/models/dtos/UserDashboardDto.ts)
         - 📄 [UserDto.ts](frontend/src/app/models/dtos/UserDto.ts)
@@ -135,6 +200,10 @@
         - 📄 [login.component.html](frontend/src/app/pages/login/login.component.html)
         - 📄 [login.component.scss](frontend/src/app/pages/login/login.component.scss)
         - 📄 [login.component.ts](frontend/src/app/pages/login/login.component.ts)
+      - 📁 **password-manager**
+        - 📄 [password-manager.component.html](frontend/src/app/pages/password-manager/password-manager.component.html)
+        - 📄 [password-manager.component.scss](frontend/src/app/pages/password-manager/password-manager.component.scss)
+        - 📄 [password-manager.component.ts](frontend/src/app/pages/password-manager/password-manager.component.ts)
       - 📁 **private-chat-dialog**
         - 📄 [private-chat-dialog.component.html](frontend/src/app/pages/private-chat-dialog/private-chat-dialog.component.html)
         - 📄 [private-chat-dialog.component.scss](frontend/src/app/pages/private-chat-dialog/private-chat-dialog.component.scss)
@@ -147,6 +216,11 @@
       - 📄 [auth.service.ts](frontend/src/app/services/auth.service.ts)
       - 📄 [cloud.service.ts](frontend/src/app/services/cloud.service.ts)
       - 📄 [dashboard.service.ts](frontend/src/app/services/dashboard.service.ts)
+      - 📄 [e2ee.service.spec.ts](frontend/src/app/services/e2ee.service.spec.ts)
+      - 📄 [e2ee.service.ts](frontend/src/app/services/e2ee.service.ts)
+      - 📄 [password-manager-unlock.service.ts](frontend/src/app/services/password-manager-unlock.service.ts)
+      - 📄 [password-manager-vault.service.ts](frontend/src/app/services/password-manager-vault.service.ts)
+      - 📄 [password-manager.service.ts](frontend/src/app/services/password-manager.service.ts)
       - 📄 [private-chat.service.ts](frontend/src/app/services/private-chat.service.ts)
       - 📄 [theme.service.ts](frontend/src/app/services/theme.service.ts)
       - 📄 [user.service.ts](frontend/src/app/services/user.service.ts)
