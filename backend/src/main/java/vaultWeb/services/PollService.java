@@ -16,10 +16,7 @@ import vaultWeb.exceptions.notfound.GroupNotFoundException;
 import vaultWeb.exceptions.notfound.NotMemberException;
 import vaultWeb.exceptions.notfound.PollNotFoundException;
 import vaultWeb.models.*;
-import vaultWeb.repositories.GroupMemberRepository;
-import vaultWeb.repositories.GroupRepository;
-import vaultWeb.repositories.PollRepository;
-import vaultWeb.repositories.PollVoteRepository;
+import vaultWeb.repositories.*;
 
 /**
  * Service class responsible for managing polls within groups.
@@ -35,27 +32,27 @@ public class PollService {
   private final GroupRepository groupRepository;
   private final GroupMemberRepository groupMemberRepository;
   private final PollVoteRepository pollVoteRepository;
+  private final PrivateChatRepository privateChatRepository;
 
   /**
    * Creates a new poll in the specified group by the given author.
    *
-   * @param group the group in which the poll will be created
+   * @param pollContext the group or private chat in which the poll will be created
    * @param author the user who creates the poll
    * @param pollDto the data transfer object containing poll details
    * @return the created Poll entity
    * @throws NotMemberException if the author is not a member of the group
    */
-  public Poll createPoll(Group group, User author, PollRequestDto pollDto) {
-    if (groupMemberRepository.findByGroupAndUser(group, author).isEmpty()) {
-      throw new NotMemberException(group.getId(), author.getId());
-    }
+  public Poll createPoll(PollContext pollContext, User author, PollRequestDto pollDto) {
 
+    validateContextAccess(pollContext, author);
     Instant deadlineInstant =
         pollDto.getDeadline() != null ? pollDto.getDeadline().toInstant() : null;
 
     Poll poll =
         Poll.builder()
-            .group(group)
+            .group(pollContext.group())
+            .privateChat(pollContext.privateChat())
             .author(author)
             .question(pollDto.getQuestion())
             .deadline(deadlineInstant)
@@ -70,6 +67,26 @@ public class PollService {
     poll.setOptions(options);
 
     return pollRepository.save(poll);
+  }
+
+  private void validateContextAccess(PollContext pollContext, User user) {
+    if (pollContext.isGroup()) {
+      boolean isNotGroupMember =
+          groupMemberRepository.findByGroupAndUser(pollContext.group(), user).isEmpty();
+      if (isNotGroupMember) {
+        throw new NotMemberException(pollContext.group().getId(), user.getId());
+      }
+    } else if (pollContext.isPrivateChat()) {
+      PrivateChat privateChat = pollContext.privateChat();
+      boolean isChatParticipant =
+          (privateChat.getUser1().getId().equals(user.getId()))
+              || (privateChat.getUser2().getId().equals(user.getId()));
+      if (!isChatParticipant) {
+        throw new UnauthorizedException("User is not a participant in this chat");
+      }
+    } else {
+      throw new IllegalStateException(("Poll has no Owner"));
+    }
   }
 
   /**
@@ -92,6 +109,18 @@ public class PollService {
     }
 
     return pollRepository.findByGroupId(groupId);
+  }
+
+  public List<Poll> getPollsByPrivateChat(Long privateChatId, User currentUser) {
+    PrivateChat privateChat =
+        privateChatRepository
+            .findById(privateChatId)
+            .orElseThrow(
+                () ->
+                    new GroupNotFoundException(
+                        "Private chat with id " + privateChatId + " not found"));
+
+    return pollRepository.findByPrivateChatId(privateChatId);
   }
 
   /**
@@ -124,10 +153,14 @@ public class PollService {
     return new PollResponseDto(poll.getId(), poll.getQuestion(), poll.isAnonymous(), options);
   }
 
+  private PollContext toPollContext(Poll poll) {
+
+    return new PollContext(poll.getGroup(), poll.getPrivateChat());
+  }
+
   /**
    * Allows a user to vote for a specific option in a poll within a group.
    *
-   * @param groupId the ID of the group containing the poll
    * @param pollId the ID of the poll
    * @param optionId the ID of the option to vote for
    * @param user the user casting the vote
@@ -138,24 +171,13 @@ public class PollService {
    * @throws PollOptionNotFoundException if the poll option invalid
    * @throws AlreadyVotedException if the user has already voted
    */
-  public void vote(Long groupId, Long pollId, Long optionId, User user) {
-    Group group =
-        groupRepository
-            .findById(groupId)
-            .orElseThrow(
-                () -> new GroupNotFoundException("Group with id " + groupId + " not found"));
-
-    if (groupMemberRepository.findByGroupAndUser(group, user).isEmpty()) {
-      throw new NotMemberException(group.getId(), user.getId());
-    }
+  public void vote(Long pollId, Long optionId, User user) {
 
     Poll poll =
         pollRepository.findById(pollId).orElseThrow(() -> new PollNotFoundException(pollId));
 
-    if (!poll.getGroup().getId().equals(groupId)) {
-      throw new PollDoesNotBelongToGroupException(
-          "pollId: " + pollId + " does not belong to groupId: " + groupId);
-    }
+    PollContext pollContext = toPollContext(poll);
+    validateContextAccess(pollContext, user);
 
     PollOption option =
         poll.getOptions().stream()
@@ -183,7 +205,6 @@ public class PollService {
   /**
    * Updates an existing poll authored by a user.
    *
-   * @param groupId the ID of the group containing the poll
    * @param pollId the ID of the poll to update
    * @param user the author of the poll
    * @param pollDto the new poll data
@@ -192,14 +213,12 @@ public class PollService {
    * @throws UnauthorizedException if the user is not the author
    * @throws PollDoesNotBelongToGroupException if the poll doesn't belong to the group
    */
-  public Poll updatePoll(Long groupId, Long pollId, User user, PollRequestDto pollDto) {
+  public Poll updatePoll(Long pollId, User user, PollRequestDto pollDto) {
     Poll poll =
         pollRepository.findById(pollId).orElseThrow(() -> new PollNotFoundException(pollId));
 
-    if (!poll.getGroup().getId().equals(groupId)) {
-      throw new PollDoesNotBelongToGroupException(
-          "pollId: " + pollId + " does not belong to groupId: " + groupId);
-    }
+    PollContext pollContext = toPollContext(poll);
+    validateContextAccess(pollContext, user);
 
     if (!poll.getAuthor().getId().equals(user.getId())) {
       throw new UnauthorizedException("Only the author can edit the poll");
@@ -227,21 +246,17 @@ public class PollService {
   /**
    * Deletes a poll authored by a user.
    *
-   * @param groupId the ID of the group containing the poll
    * @param pollId the ID of the poll to delete
    * @param user the author of the poll
    * @throws PollNotFoundException if the poll does not exist
    * @throws UnauthorizedException if the user is not the author
    * @throws PollDoesNotBelongToGroupException if the poll doesn't belong to the group
    */
-  public void deletePoll(Long groupId, Long pollId, User user) {
+  public void deletePoll(Long pollId, User user) {
     Poll poll =
         pollRepository.findById(pollId).orElseThrow(() -> new PollNotFoundException(pollId));
-
-    if (!poll.getGroup().getId().equals(groupId)) {
-      throw new PollDoesNotBelongToGroupException(
-          "pollId: " + pollId + " does not belong to groupId: " + groupId);
-    }
+    PollContext pollContext = toPollContext(poll);
+    validateContextAccess(pollContext, user);
 
     if (!poll.getAuthor().getId().equals(user.getId())) {
       throw new UnauthorizedException("Only the author can delete the poll");

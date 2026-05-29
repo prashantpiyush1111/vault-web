@@ -8,4 +8,6 @@ public interface PollRepository extends JpaRepository<Poll, Long> {
   List<Poll> findByGroupId(Long groupId);
 
   List<Poll> findByGroupIdIn(List<Long> groupIds);
+
+  List<Poll> findByPrivateChatId(Long privateChatId);
 }
