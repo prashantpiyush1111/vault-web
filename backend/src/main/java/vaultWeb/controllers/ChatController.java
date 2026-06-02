@@ -37,12 +37,7 @@ public class ChatController {
   public void sendMessage(@Valid @Payload ChatMessageDto messageDto) {
     ChatMessage savedMessage = chatService.saveMessage(messageDto);
 
-    ChatMessageDto responseDto = new ChatMessageDto();
-    responseDto.setE2eePayload(savedMessage.getE2eePayload());
-    responseDto.setTimestamp(savedMessage.getTimestamp().toString());
-    responseDto.setSenderUsername(savedMessage.getSender().getUsername());
-    responseDto.setGroupId(savedMessage.getGroup().getId());
-    responseDto.setSenderDeviceId(savedMessage.getSenderDeviceId());
+    ChatMessageDto responseDto = chatService.toDto(savedMessage);
 
     messagingTemplate.convertAndSend(
         "/topic/group/" + savedMessage.getGroup().getId(), responseDto);
@@ -58,12 +53,7 @@ public class ChatController {
   public void sendPrivateMessage(@Valid @Payload ChatMessageDto messageDto) {
     ChatMessage savedMessage = chatService.saveMessage(messageDto);
 
-    ChatMessageDto responseDto = new ChatMessageDto();
-    responseDto.setE2eePayload(savedMessage.getE2eePayload());
-    responseDto.setTimestamp(savedMessage.getTimestamp().toString());
-    responseDto.setSenderUsername(savedMessage.getSender().getUsername());
-    responseDto.setPrivateChatId(savedMessage.getPrivateChat().getId());
-    responseDto.setSenderDeviceId(savedMessage.getSenderDeviceId());
+    ChatMessageDto responseDto = chatService.toDto(savedMessage);
 
     String user1 = savedMessage.getPrivateChat().getUser1().getUsername();
     String user2 = savedMessage.getPrivateChat().getUser2().getUsername();

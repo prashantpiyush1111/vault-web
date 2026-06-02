@@ -4,6 +4,7 @@ import jakarta.validation.constraints.NotBlank;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import vaultWeb.models.enums.MessageType;
 
 @Data
 @NoArgsConstructor
@@ -16,5 +17,8 @@ public class ChatMessageDto {
   private Long senderId;
   private String senderUsername;
   @NotBlank private String senderDeviceId;
-  @NotBlank private String e2eePayload;
+
+  private String e2eePayload;
+  private MessageType messageType;
+  private PollResponseDto poll;
 }

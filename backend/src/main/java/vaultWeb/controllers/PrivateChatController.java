@@ -23,6 +23,7 @@ import vaultWeb.models.User;
 import vaultWeb.repositories.ChatMessageRepository;
 import vaultWeb.repositories.DeviceRepository;
 import vaultWeb.repositories.PrivateChatRepository;
+import vaultWeb.services.ChatService;
 import vaultWeb.services.PrivateChatService;
 
 @RestController
@@ -38,6 +39,7 @@ public class PrivateChatController {
   private final ChatMessageRepository chatMessageRepository;
   private final DeviceRepository deviceRepository;
   private final PrivateChatRepository privateChatRepository;
+  private final ChatService chatService;
 
   @GetMapping("/between")
   @Operation(
@@ -87,14 +89,7 @@ public class PrivateChatController {
     return messages.stream()
         .map(
             message -> {
-              ChatMessageDto dto = new ChatMessageDto();
-              dto.setE2eePayload(message.getE2eePayload());
-              dto.setTimestamp(message.getTimestamp().toString());
-              dto.setGroupId(null);
-              dto.setPrivateChatId(chat.getId());
-              dto.setSenderId(message.getSender().getId());
-              dto.setSenderUsername(message.getSender().getUsername());
-              dto.setSenderDeviceId(message.getSenderDeviceId());
+              ChatMessageDto dto = chatService.toDto(message);
               return dto;
             })
         .toList();

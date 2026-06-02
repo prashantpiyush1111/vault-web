@@ -16,6 +16,7 @@ import vaultWeb.exceptions.notfound.GroupNotFoundException;
 import vaultWeb.exceptions.notfound.NotMemberException;
 import vaultWeb.exceptions.notfound.PollNotFoundException;
 import vaultWeb.models.*;
+import vaultWeb.models.enums.MessageType;
 import vaultWeb.repositories.*;
 
 /**
@@ -33,6 +34,7 @@ public class PollService {
   private final GroupMemberRepository groupMemberRepository;
   private final PollVoteRepository pollVoteRepository;
   private final PrivateChatRepository privateChatRepository;
+  private final ChatMessageRepository chatMessageRepository;
 
   /**
    * Creates a new poll in the specified group by the given author.
@@ -66,7 +68,20 @@ public class PollService {
 
     poll.setOptions(options);
 
-    return pollRepository.save(poll);
+    Poll savedPoll = pollRepository.save(poll);
+    ChatMessage message =
+        ChatMessage.builder()
+            .sender(author)
+            .group(pollContext.group())
+            .privateChat(pollContext.privateChat())
+            .timestamp(Instant.now())
+            .messageType(MessageType.POLL)
+            .poll(savedPoll)
+            .build();
+
+    chatMessageRepository.save(message);
+
+    return savedPoll;
   }
 
   private void validateContextAccess(PollContext pollContext, User user) {

@@ -11,6 +11,7 @@ import vaultWeb.models.ChatMessage;
 import vaultWeb.models.Group;
 import vaultWeb.models.PrivateChat;
 import vaultWeb.models.User;
+import vaultWeb.models.enums.MessageType;
 import vaultWeb.repositories.ChatMessageRepository;
 import vaultWeb.repositories.GroupRepository;
 import vaultWeb.repositories.PrivateChatRepository;
@@ -40,6 +41,7 @@ public class ChatService {
   private final UserRepository userRepository;
   private final GroupRepository groupRepository;
   private final PrivateChatRepository privateChatRepository;
+  private final PollService pollService;
 
   /**
    * Saves a chat message to a group or private chat.
@@ -82,12 +84,14 @@ public class ChatService {
       message.setTimestamp(Instant.now());
     }
 
-    if (dto.getE2eePayload() == null
-        || dto.getE2eePayload().isBlank()
-        || dto.getSenderDeviceId() == null
-        || dto.getSenderDeviceId().isBlank()) {
-      throw new IllegalArgumentException(
-          "Missing end-to-end encrypted payload or sender device ID");
+    if (dto.getMessageType() == MessageType.TEXT) {
+      if (dto.getE2eePayload() == null
+          || dto.getE2eePayload().isBlank()
+          || dto.getSenderDeviceId() == null
+          || dto.getSenderDeviceId().isBlank()) {
+        throw new IllegalArgumentException(
+            "Missing end-to-end encrypted payload or sender device ID");
+      }
     }
 
     if (dto.getGroupId() != null) {
@@ -106,6 +110,7 @@ public class ChatService {
           privateChatRepository
               .findById(dto.getPrivateChatId())
               .orElseThrow(() -> new PrivateChatNotFoundException("Private chat not found"));
+      message.setMessageType(dto.getMessageType());
       message.setE2eePayload(dto.getE2eePayload());
       message.setSenderDeviceId(dto.getSenderDeviceId());
       message.setPrivateChat(privateChat);
@@ -114,5 +119,41 @@ public class ChatService {
     }
 
     return chatMessageRepository.save(message);
+  }
+
+  public ChatMessageDto toDto(ChatMessage message) {
+
+    ChatMessageDto dto = new ChatMessageDto();
+
+    dto.setTimestamp(message.getTimestamp().toString());
+
+    dto.setSenderId(message.getSender().getId());
+
+    dto.setSenderUsername(message.getSender().getUsername());
+
+    dto.setSenderDeviceId(message.getSenderDeviceId());
+
+    dto.setMessageType(message.getMessageType());
+
+    if (message.getGroup() != null) {
+
+      dto.setGroupId(message.getGroup().getId());
+    }
+
+    if (message.getPrivateChat() != null) {
+
+      dto.setPrivateChatId(message.getPrivateChat().getId());
+    }
+
+    if (message.getMessageType() == MessageType.TEXT) {
+
+      dto.setE2eePayload(message.getE2eePayload());
+
+    } else if (message.getMessageType() == MessageType.POLL) {
+
+      dto.setPoll(pollService.toResponseDto(message.getPoll()));
+    }
+
+    return dto;
   }
 }
