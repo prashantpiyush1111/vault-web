@@ -9,10 +9,11 @@ import { DialogModule } from 'primeng/dialog';
 import { InputTextModule } from 'primeng/inputtext';
 import { Menu } from 'primeng/menu';
 import { MenuModule } from 'primeng/menu';
-import { TableModule } from 'primeng/table';
+import { TableLazyLoadEvent, TableModule } from 'primeng/table';
 import { ToolbarModule } from 'primeng/toolbar';
 import { FileDto } from '../../models/dtos/FileDto';
 import { FolderDto } from '../../models/dtos/FolderDto';
+import { FolderContentItemDto } from '../../models/dtos/FolderContentItemDto';
 import { CloudService } from '../../services/cloud.service';
 import { finalize, firstValueFrom } from 'rxjs';
 import { UiToastService } from '../../core/services/ui-toast.service';
@@ -77,6 +78,10 @@ export class CloudComponent implements OnInit {
   entries: CloudEntry[] = [];
   downloadingPaths = new Set<string>();
 
+  pageSize = 50;
+  totalElements = 0;
+  private contentPage = 0;
+
   private draggedPath: string | null = null;
   private draggedIsFolder = false;
 
@@ -134,31 +139,53 @@ export class CloudComponent implements OnInit {
   }
 
   get totalItemsInView(): number {
-    if (!this.currentFolder) return 0;
-    return this.currentFolder.folders.length + this.currentFolder.files.length;
+    return this.totalElements;
   }
 
-  private buildEntries(folder: FolderDto): CloudEntry[] {
-    const folderEntries: CloudEntry[] = folder.folders.map((entryFolder) => ({
-      kind: 'folder',
-      name: entryFolder.name,
-      path: entryFolder.path,
-      sizeLabel:
-        entryFolder.directChildrenCount >= 0
-          ? `${entryFolder.directChildrenCount} items`
-          : '-',
-      typeLabel: 'Folder',
+  private buildEntries(items: FolderContentItemDto[]): CloudEntry[] {
+    return items.map((item) => ({
+      kind: item.directory ? 'folder' : 'file',
+      name: item.name,
+      path: item.path,
+      sizeLabel: this.formatFileSize(item.size),
+      typeLabel: item.directory ? 'Folder' : item.mimeType || 'Unknown',
     }));
+  }
 
-    const fileEntries: CloudEntry[] = folder.files.map((entryFile) => ({
-      kind: 'file',
-      name: entryFile.name,
-      path: entryFile.path,
-      sizeLabel: this.formatFileSize(entryFile.size),
-      typeLabel: entryFile.mimeType || 'Unknown',
-    }));
+  private loadFolderContent(relativePath: string, page: number) {
+    this.cloudService
+      .getFolderContent(relativePath, page, this.pageSize)
+      .subscribe({
+        next: (contentPage) => {
+          this.entries = this.buildEntries(contentPage.content);
+          this.totalElements = contentPage.totalElements;
+          this.contentPage = contentPage.pageNumber;
+          this.loading = false;
+        },
+        error: () => {
+          this.error = 'Error loading folder contents';
+          this.toast.error(
+            'Could not load folder',
+            'Folder contents are unavailable.',
+          );
+          this.loading = false;
+        },
+      });
+  }
 
-    return [...folderEntries, ...fileEntries];
+  onPageChange(event: TableLazyLoadEvent) {
+    const rows = event.rows ?? this.pageSize;
+    const first = Array.isArray(event.first)
+      ? (event.first[0] ?? 0)
+      : (event.first ?? 0);
+    const page = Math.floor(first / rows);
+    if (page === this.contentPage && rows === this.pageSize) return;
+    this.pageSize = rows;
+    this.loading = true;
+    const relativePath = this.getRelativePath(
+      this.currentFolder?.path || this.rootPath,
+    );
+    this.loadFolderContent(relativePath, page);
   }
 
   loadRootFolder() {
@@ -167,10 +194,9 @@ export class CloudComponent implements OnInit {
     this.cloudService.getRootFolder(false).subscribe({
       next: (folder) => {
         this.currentFolder = folder;
-        this.entries = this.buildEntries(folder);
         this.rootPath = folder.path;
         this.updateBreadcrumbs(folder.path);
-        this.loading = false;
+        this.loadFolderContent('/', 0);
       },
       error: () => {
         this.error = 'Error loading root folder';
@@ -193,9 +219,8 @@ export class CloudComponent implements OnInit {
     this.cloudService.getFolderByPath(relativePath, false).subscribe({
       next: (folder) => {
         this.currentFolder = folder;
-        this.entries = this.buildEntries(folder);
         this.updateBreadcrumbs(folder.path);
-        this.loading = false;
+        this.loadFolderContent(relativePath, 0);
       },
       error: () => {
         this.error = 'Error navigating to folder';

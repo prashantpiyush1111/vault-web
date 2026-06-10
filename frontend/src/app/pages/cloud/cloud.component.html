@@ -65,6 +65,11 @@
   <section *ngIf="currentFolder && !loading" class="cloud-table-wrap">
     <p-table
       [value]="entries"
+      [lazy]="true"
+      [paginator]="totalElements > pageSize"
+      [rows]="pageSize"
+      [totalRecords]="totalElements"
+      (onLazyLoad)="onPageChange($event)"
       styleClass="cloud-table text-xxs sm:text-xs"
       [tableStyle]="{ 'min-width': '100%' }"
     >
