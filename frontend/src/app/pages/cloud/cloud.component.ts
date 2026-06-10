@@ -80,6 +80,7 @@ export class CloudComponent implements OnInit {
 
   pageSize = 50;
   totalElements = 0;
+  contentFirst = 0;
   private contentPage = 0;
   private contentRequestId = 0;
 
@@ -186,6 +187,7 @@ export class CloudComponent implements OnInit {
       : (event.first ?? 0);
     const page = Math.floor(first / rows);
     if (page === this.contentPage && rows === this.pageSize) return;
+    this.contentFirst = first;
     this.pageSize = rows;
     this.loading = true;
     const relativePath = this.getRelativePath(
@@ -197,6 +199,7 @@ export class CloudComponent implements OnInit {
   loadRootFolder() {
     this.loading = true;
     this.error = undefined;
+    this.contentFirst = 0;
     this.cloudService.getRootFolder(false).subscribe({
       next: (folder) => {
         this.currentFolder = folder;
@@ -221,6 +224,7 @@ export class CloudComponent implements OnInit {
 
   navigateToFolder(folderPath?: string) {
     this.loading = true;
+    this.contentFirst = 0;
     const relativePath = this.getRelativePath(folderPath || this.rootPath);
     this.cloudService.getFolderByPath(relativePath, false).subscribe({
       next: (folder) => {

@@ -68,6 +68,7 @@
       [lazy]="true"
       [paginator]="totalElements > pageSize"
       [rows]="pageSize"
+      [first]="contentFirst"
       [totalRecords]="totalElements"
       (onLazyLoad)="onPageChange($event)"
       styleClass="cloud-table text-xxs sm:text-xs"
