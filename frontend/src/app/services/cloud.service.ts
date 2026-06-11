@@ -2,6 +2,8 @@ import { Injectable } from '@angular/core';
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { FolderDto } from '../models/dtos/FolderDto';
+import { FolderContentItemDto } from '../models/dtos/FolderContentItemDto';
+import { PageResponseDto } from '../models/dtos/PageResponseDto';
 import { environment } from '../../environments/environment';
 
 @Injectable({
@@ -34,6 +36,26 @@ export class CloudService {
       .set('path', path)
       .set('includeChildCounts', String(includeChildCounts));
     return this.http.get<FolderDto>(`${this.apiUrl}/folders/path`, { params });
+  }
+
+  getFolderContent(
+    relativePath?: string,
+    page = 0,
+    size = 50,
+    sort?: string,
+  ): Observable<PageResponseDto<FolderContentItemDto>> {
+    const path = this.normalizePath(relativePath);
+    let params = new HttpParams()
+      .set('path', path)
+      .set('page', String(page))
+      .set('size', String(size));
+    if (sort) {
+      params = params.set('sort', sort);
+    }
+    return this.http.get<PageResponseDto<FolderContentItemDto>>(
+      `${this.apiUrl}/folders/content`,
+      { params },
+    );
   }
 
   getFileContent(relativePath: string): Observable<string> {
