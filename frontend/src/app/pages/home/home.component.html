@@ -128,7 +128,10 @@
           >
             {{ user.username.charAt(0).toUpperCase() }}
           </div>
-          <span class="text-gray-800 font-medium">{{ user.username }}</span>
+          <!-- <span class="text-gray-800 font-medium">{{ user.username }}</span> -->
+          <span class="text-gray-800 font-medium">{{
+            displayUsername(user.username)
+          }}</span>
         </li>
       </ul>
     </div>
