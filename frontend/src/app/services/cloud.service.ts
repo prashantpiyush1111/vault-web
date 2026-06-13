@@ -4,6 +4,7 @@ import { Observable } from 'rxjs';
 import { FolderDto } from '../models/dtos/FolderDto';
 import { FolderContentItemDto } from '../models/dtos/FolderContentItemDto';
 import { PageResponseDto } from '../models/dtos/PageResponseDto';
+import { TrashEntryDto } from '../models/dtos/TrashEntryDto';
 import { environment } from '../../environments/environment';
 
 @Injectable({
@@ -134,5 +135,22 @@ export class CloudService {
       params: { path },
       responseType: 'blob',
     });
+  }
+
+  listTrash(): Observable<TrashEntryDto[]> {
+    return this.http.get<TrashEntryDto[]>(`${this.apiUrl}/files/trash`);
+  }
+
+  restoreTrashEntry(id: string): Observable<void> {
+    return this.http.post<void>(
+      `${this.apiUrl}/files/trash/${encodeURIComponent(id)}/restore`,
+      null,
+    );
+  }
+
+  purgeTrashEntry(id: string): Observable<void> {
+    return this.http.delete<void>(
+      `${this.apiUrl}/files/trash/${encodeURIComponent(id)}`,
+    );
   }
 }

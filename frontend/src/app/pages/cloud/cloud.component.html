@@ -8,13 +8,22 @@
         {{ totalItemsInView }} items in this folder
       </p>
     </div>
-    <p-button
-      label="Refresh"
-      icon="pi pi-refresh"
-      [outlined]="true"
-      styleClass="p-button-sm cloud-accent-btn text-xxs sm:text-xs"
-      (click)="reloadRootFolder()"
-    ></p-button>
+    <div class="cloud-headline-actions" style="display: flex; gap: 0.5rem">
+      <p-button
+        label="Trash"
+        icon="pi pi-trash"
+        [outlined]="true"
+        styleClass="p-button-sm cloud-accent-btn text-xxs sm:text-xs"
+        (click)="goToTrash()"
+      ></p-button>
+      <p-button
+        label="Refresh"
+        icon="pi pi-refresh"
+        [outlined]="true"
+        styleClass="p-button-sm cloud-accent-btn text-xxs sm:text-xs"
+        (click)="reloadRootFolder()"
+      ></p-button>
+    </div>
   </section>
 
   <section class="cloud-toolbar-wrap">
