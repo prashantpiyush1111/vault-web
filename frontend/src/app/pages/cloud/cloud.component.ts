@@ -1,6 +1,7 @@
 import { CommonModule } from '@angular/common';
 import { Component, ElementRef, OnInit, ViewChild } from '@angular/core';
 import { FormsModule } from '@angular/forms';
+import { Router } from '@angular/router';
 import { MenuItem, ConfirmationService } from 'primeng/api';
 import { BreadcrumbModule } from 'primeng/breadcrumb';
 import { ButtonModule } from 'primeng/button';
@@ -91,6 +92,7 @@ export class CloudComponent implements OnInit {
     private cloudService: CloudService,
     private confirmationService: ConfirmationService,
     private toast: UiToastService,
+    private router: Router,
   ) {}
 
   private getErrorMessage(err: unknown): string {
@@ -220,6 +222,10 @@ export class CloudComponent implements OnInit {
 
   reloadRootFolder() {
     this.loadRootFolder();
+  }
+
+  goToTrash() {
+    this.router.navigate(['/cloud/trash']);
   }
 
   navigateToFolder(folderPath?: string) {
