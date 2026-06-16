@@ -19,14 +19,13 @@ export class AppComponent {
     private router: Router,
     public themeService: ThemeService,
   ) {
-    this.showNavbar = !['/login', '/register'].includes(this.router.url);
+    const noNavbarRoutes = ['/login', '/register', '/not-found', '/error'];
+    this.showNavbar = !noNavbarRoutes.includes(this.router.url);
     this.router.events
       .pipe(filter((event) => event instanceof NavigationEnd))
       .subscribe((event: NavigationEnd) => {
-        // show navbar if not in Login/Register
-        this.showNavbar = !['/login', '/register'].includes(
-          event.urlAfterRedirects,
-        );
+        // show navbar if not on auth or error pages
+        this.showNavbar = !noNavbarRoutes.includes(event.urlAfterRedirects);
       });
   }
 

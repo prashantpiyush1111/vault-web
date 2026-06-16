@@ -6,6 +6,7 @@ import {
 } from '@angular/common/http';
 import { inject } from '@angular/core';
 import { catchError, switchMap, throwError, ReplaySubject } from 'rxjs';
+import { Router } from '@angular/router';
 import { AuthService } from '../../services/auth.service';
 import { NetworkStatusService } from '../services/network-status.service';
 
@@ -15,6 +16,7 @@ let isRefreshing = false;
 export const tokenInterceptor: HttpInterceptorFn = (req, next) => {
   const authService = inject(AuthService);
   const networkStatusService = inject(NetworkStatusService);
+  const router = inject(Router);
 
   // Explicit Authorization Header
   if (req.headers.has('Authorization')) {
@@ -27,6 +29,9 @@ export const tokenInterceptor: HttpInterceptorFn = (req, next) => {
 
         if (error.status === 401) {
           return handleUnauthorized(req, next, authService, error);
+        }
+        if (isServerError(error) && !isExcludedFromErrorPage(req.url)) {
+          void router.navigate(['/error']);
         }
         return throwError(() => error);
       }),
@@ -55,6 +60,9 @@ export const tokenInterceptor: HttpInterceptorFn = (req, next) => {
       }
 
       if (error.status !== 401) {
+        if (isServerError(error) && !isExcludedFromErrorPage(req.url)) {
+          void router.navigate(['/error']);
+        }
         return throwError(() => error);
       }
 
@@ -113,4 +121,18 @@ function handleUnauthorized(
 
 function isBackendUnavailable(error: HttpErrorResponse): boolean {
   return error.status === 0;
+}
+
+function isServerError(error: HttpErrorResponse): boolean {
+  return error.status >= 500;
+}
+
+// Exclude specific background endpoints (like refresh and devices) to avoid redirect loops
+// or interrupting the user. We allow login/register 500s to redirect to the error page.
+function isExcludedFromErrorPage(url: string): boolean {
+  return (
+    url.includes('/auth/refresh') ||
+    url.includes('/auth/logout') ||
+    url.includes('/devices/')
+  );
 }
