@@ -155,6 +155,7 @@
                 <artifactId>spotless-maven-plugin</artifactId>
                 <version>3.5.1</version>
                 <configuration>
+                    <lineEndings>UNIX</lineEndings>
                     <java>
                         <googleJavaFormat>
                             <version>1.28.0</version>
