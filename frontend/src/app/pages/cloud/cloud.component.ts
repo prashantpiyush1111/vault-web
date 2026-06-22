@@ -15,6 +15,7 @@ import { ToolbarModule } from 'primeng/toolbar';
 import { FileDto } from '../../models/dtos/FileDto';
 import { FolderDto } from '../../models/dtos/FolderDto';
 import { FolderContentItemDto } from '../../models/dtos/FolderContentItemDto';
+import { SearchResultDto } from '../../models/dtos/SearchResultDto';
 import { CloudService } from '../../services/cloud.service';
 import { finalize, firstValueFrom } from 'rxjs';
 import { UiToastService } from '../../core/services/ui-toast.service';
@@ -30,6 +31,7 @@ interface CloudEntry {
   path: string;
   sizeLabel: string;
   typeLabel: string;
+  lastModifiedAt: number;
 }
 
 type CloudSort =
@@ -88,6 +90,10 @@ export class CloudComponent implements OnInit {
   sort: CloudSort = 'name,asc';
   entries: CloudEntry[] = [];
   downloadingPaths = new Set<string>();
+
+  searchQuery = '';
+  searchActive = false;
+  searching = false;
 
   pageSize = 50;
   totalElements = 0;
@@ -195,6 +201,19 @@ export class CloudComponent implements OnInit {
       path: item.path,
       sizeLabel: this.formatFileSize(item.size),
       typeLabel: item.directory ? 'Folder' : item.mimeType || 'Unknown',
+      lastModifiedAt: item.lastModifiedAt,
+    }));
+  }
+
+  private buildSearchEntries(results: SearchResultDto[]): CloudEntry[] {
+    return results.map((result) => ({
+      kind: result.type === 'folder' ? 'folder' : 'file',
+      name: result.name,
+      path: result.path,
+      sizeLabel: this.formatFileSize(result.size ?? 0),
+      typeLabel:
+        result.type === 'folder' ? 'Folder' : result.mimeType || 'Unknown',
+      lastModifiedAt: result.lastModifiedAt,
     }));
   }
 
@@ -251,7 +270,49 @@ export class CloudComponent implements OnInit {
     this.loadFolderContent(relativePath, 0);
   }
 
+  onSearch() {
+    const query = this.searchQuery.trim();
+    if (!query) {
+      this.clearSearch();
+      return;
+    }
+    const relativePath = this.getRelativePath(
+      this.currentFolder?.path || this.rootPath,
+    );
+    this.searching = true;
+    this.searchActive = true;
+    const requestId = ++this.contentRequestId;
+    this.cloudService.searchInFolder(relativePath, query).subscribe({
+      next: (results) => {
+        if (requestId !== this.contentRequestId) return;
+        this.entries = this.buildSearchEntries(results);
+        this.totalElements = this.entries.length;
+        this.searching = false;
+      },
+      error: (err) => {
+        if (requestId !== this.contentRequestId) return;
+        this.searching = false;
+        this.toast.error('Search failed', this.getErrorMessage(err));
+      },
+    });
+  }
+
+  clearSearch() {
+    if (!this.searchActive && this.searchQuery === '') return;
+    this.searchQuery = '';
+    this.searchActive = false;
+    this.searching = false;
+    this.contentFirst = 0;
+    this.loading = true;
+    const relativePath = this.getRelativePath(
+      this.currentFolder?.path || this.rootPath,
+    );
+    this.loadFolderContent(relativePath, 0);
+  }
+
   loadRootFolder() {
+    this.searchActive = false;
+    this.searchQuery = '';
     this.loading = true;
     this.error = undefined;
     this.contentFirst = 0;
@@ -282,6 +343,8 @@ export class CloudComponent implements OnInit {
   }
 
   navigateToFolder(folderPath?: string) {
+    this.searchActive = false;
+    this.searchQuery = '';
     this.loading = true;
     this.contentFirst = 0;
     const relativePath = this.getRelativePath(folderPath || this.rootPath);

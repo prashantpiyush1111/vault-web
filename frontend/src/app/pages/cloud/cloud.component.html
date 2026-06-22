@@ -5,7 +5,15 @@
     <div>
       <h1 class="cloud-title text-base sm:text-lg">Cloud Page</h1>
       <p class="cloud-subtitle text-xxs sm:text-xs">
-        {{ totalItemsInView }} items in this folder
+        <ng-container *ngIf="searchActive">
+          {{ totalItemsInView }} result{{
+            totalItemsInView === 1 ? "" : "s"
+          }}
+          for "{{ searchQuery }}"
+        </ng-container>
+        <ng-container *ngIf="!searchActive">
+          {{ totalItemsInView }} items in this folder
+        </ng-container>
       </p>
     </div>
     <div class="cloud-headline-actions">
@@ -56,6 +64,26 @@
             [appendTo]="'body'"
             [model]="sortMenuItems"
           ></p-menu>
+          <span class="cloud-search">
+            <i class="pi pi-search cloud-search-icon"></i>
+            <input
+              pInputText
+              type="text"
+              [(ngModel)]="searchQuery"
+              (keydown.enter)="onSearch()"
+              placeholder="Search this folder"
+              class="cloud-search-input text-xxs sm:text-xs"
+            />
+            <button
+              *ngIf="searchActive || searchQuery"
+              type="button"
+              class="cloud-search-clear"
+              aria-label="Clear search"
+              (click)="clearSearch()"
+            >
+              <i class="pi pi-times"></i>
+            </button>
+          </span>
           <input
             #fileUploadInput
             type="file"
@@ -87,8 +115,8 @@
   <section *ngIf="currentFolder && !loading" class="cloud-table-wrap">
     <p-table
       [value]="entries"
-      [lazy]="true"
-      [paginator]="totalElements > pageSize"
+      [lazy]="!searchActive"
+      [paginator]="!searchActive && totalElements > pageSize"
       [rows]="pageSize"
       [first]="contentFirst"
       [totalRecords]="totalElements"
@@ -101,6 +129,7 @@
           <th>Name</th>
           <th>Size</th>
           <th>Type</th>
+          <th>Modified</th>
           <th class="text-right">Actions</th>
         </tr>
       </ng-template>
@@ -139,6 +168,9 @@
           </td>
           <td class="cloud-muted">{{ entry.sizeLabel }}</td>
           <td class="cloud-muted">{{ entry.typeLabel }}</td>
+          <td class="cloud-muted">
+            {{ entry.lastModifiedAt | date: "short" }}
+          </td>
           <td>
             <div class="cloud-actions">
               <p-button
@@ -174,8 +206,13 @@
       </ng-template>
       <ng-template pTemplate="emptymessage">
         <tr>
-          <td colspan="4" class="cloud-empty text-xxs sm:text-xs">
-            This folder is empty. Create a new folder or file.
+          <td colspan="5" class="cloud-empty text-xxs sm:text-xs">
+            <ng-container *ngIf="searchActive; else emptyFolderMsg">
+              No results for "{{ searchQuery }}".
+            </ng-container>
+            <ng-template #emptyFolderMsg>
+              This folder is empty. Create a new folder or file.
+            </ng-template>
           </td>
         </tr>
       </ng-template>

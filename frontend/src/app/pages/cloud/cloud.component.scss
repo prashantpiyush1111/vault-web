@@ -44,7 +44,45 @@
 .cloud-toolbar-start {
   display: flex;
   align-items: center;
+  flex-wrap: wrap;
   gap: 0.4rem;
+}
+
+.cloud-search {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  padding: 0.15rem 0.5rem;
+  border: 1px solid var(--color-input-border);
+  border-radius: 999px;
+  background: var(--color-input-bg);
+}
+
+.cloud-search-icon {
+  color: var(--color-text-secondary);
+  font-size: 0.7rem;
+}
+
+:host ::ng-deep .cloud-search .cloud-search-input.p-inputtext {
+  border: 0;
+  background: transparent;
+  box-shadow: none;
+  padding: 0.1rem 0;
+  width: clamp(6rem, 30vw, 9rem);
+}
+
+.cloud-search-clear {
+  border: 0;
+  background: transparent;
+  color: var(--color-text-secondary);
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  padding: 0;
+}
+
+.cloud-search-clear:hover {
+  color: var(--color-text-primary);
 }
 
 :host ::ng-deep .cloud-breadcrumb {
