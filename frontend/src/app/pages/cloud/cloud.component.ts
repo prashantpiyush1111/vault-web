@@ -740,6 +740,11 @@ export class CloudComponent implements OnInit {
     this.draggedOverPath = null;
   }
 
+  onDragEnd() {
+    this.draggedPath = null;
+    this.draggedOverPath = null;
+  }
+
   async onDrop(event: DragEvent, targetFolderPath?: string | null) {
     event.preventDefault();
     this.draggedOverPath = null;

@@ -138,6 +138,7 @@
               (dragstart)="
                 onDragStart($event, entry.path, entry.kind === 'folder')
               "
+              (dragend)="onDragEnd()"
               (click)="
                 entry.kind === 'folder'
                   ? navigateToFolder(entry.path)
