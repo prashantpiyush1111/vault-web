@@ -76,9 +76,7 @@
           <i *ngIf="!isDarkTheme" class="pi pi-moon"></i>
         </button>
 
-        <!-- User Avatar (profile picture or initial letter fallback) -->
-        <!-- *ngIf="profilePictureUrl" shows the <img> only when a real picture URL exists -->
-        <!-- The else #initialAvatar block shows the letter fallback -->
+        <!-- User Avatar -->
         <div class="navbar-avatar-wrapper">
           <img
             *ngIf="profilePictureUrl; else initialAvatar"
@@ -86,7 +84,6 @@
             alt="Your profile picture"
             class="navbar-avatar-img"
           />
-          <!-- #initialAvatar is a template reference — Angular uses it as the else branch above -->
           <ng-template #initialAvatar>
             <div class="navbar-avatar-initial" [title]="'Logged in as ' + (authService.getUsername() || '')">
               {{ usernameInitial }}

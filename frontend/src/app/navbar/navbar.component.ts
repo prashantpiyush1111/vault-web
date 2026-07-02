@@ -28,27 +28,22 @@ export class NavbarComponent implements OnInit {
 
   constructor(
     public themeService: ThemeService,
-    // 'public' so the HTML template can access authService.getUsername() in [title] binding
     public authService: AuthService,
-    // Inject UserService so we can call getProfilePicture() and getProfilePictureUrl()
     private userService: UserService,
   ) {}
 
   /**
-   * ngOnInit() is Angular's lifecycle hook — it runs once after the component is created.
-   * We use it to load the profile picture as soon as the navbar appears.
-   * This is the standard Angular way to run setup logic (not in the constructor).
+   * Loads the profile picture when the navbar initializes.
    */
   ngOnInit(): void {
     this.loadProfilePicture();
   }
 
   /**
-   * Calls the backend to get the current user's profile picture path,
-   * then converts it to a full URL using userService.getProfilePictureUrl().
+   * Fetches the current user's profile picture and sets the URL.
    */
   loadProfilePicture(): void {
-    // Only try to load if the user is logged in (has a JWT token)
+
     if (!this.authService.isLoggedIn()) {
       return;
     }

@@ -90,28 +90,14 @@ public class UserService {
 
   /**
    * Saves a profile picture path to the user's record in the database.
-   *
-   * <p>Call this AFTER the file has been successfully saved to disk by ProfilePictureService.
-   * The path stored here (e.g. "uploads/profile-pictures/42_abc.jpg") is what the frontend
-   * uses to build the full image URL.
-   *
-   * @param user The authenticated user whose record needs updating.
-   * @param picturePath The relative file path returned by ProfilePictureService.store().
    */
   public void updateProfilePicture(User user, String picturePath) {
-    // Simply set the field on the entity and call save().
-    // Spring Data JPA's save() issues an UPDATE SQL statement automatically.
     user.setProfilePicture(picturePath);
     userRepository.save(user);
   }
 
   /**
    * Clears the profile picture from the user's database record (sets it to null).
-   *
-   * <p>Call this AFTER the file has been deleted from disk by ProfilePictureService.delete().
-   * Setting the field to null in the DB means "this user has no profile picture".
-   *
-   * @param user The authenticated user who wants to remove their profile picture.
    */
   public void removeProfilePicture(User user) {
     user.setProfilePicture(null);
