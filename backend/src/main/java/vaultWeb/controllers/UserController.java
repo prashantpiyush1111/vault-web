@@ -206,16 +206,6 @@ public class UserController {
 
   /**
    * Upload (or replace) the current user's profile picture.
-   *
-   * <p>How it works:
-   * 1. We get the currently logged-in user from the JWT token (via authService.getCurrentUser())
-   * 2. If the user already has a picture, we delete the old file from disk first
-   * 3. We call profilePictureService.store() to validate and save the new file
-   * 4. We update the user's record in the database with the new file path
-   * 5. We return the new picture path so the frontend can immediately display it
-   *
-   * <p>@RequestParam("file") MultipartFile — "file" is the field name in the multipart form.
-   * Angular must send the file using exactly this key: formData.append("file", selectedFile)
    */
   @PostMapping(value = "/profile-picture", consumes = "multipart/form-data")
   @Operation(
@@ -226,34 +216,23 @@ public class UserController {
   @ApiResponse(responseCode = "401", description = "Unauthorized — must be logged in.")
   public ResponseEntity<Map<String, String>> uploadProfilePicture(
       @RequestParam("file") MultipartFile file) throws IOException {
-    // Step 1: Get the currently logged-in user
     User currentUser = authService.getCurrentUser();
     if (currentUser == null) {
       throw new UnauthorizedException("User not authenticated");
     }
 
-    // Step 2: If they already have a picture, delete the old file from disk
-    // We do this BEFORE storing the new file to avoid orphan files piling up on disk.
     if (currentUser.getProfilePicture() != null) {
       profilePictureService.delete(currentUser.getProfilePicture());
     }
 
-    // Step 3: Validate and save the new file to disk (throws InvalidFileException if bad)
     String newPicturePath = profilePictureService.store(file, currentUser.getId());
-
-    // Step 4: Update the database record so the new path is persisted
     userService.updateProfilePicture(currentUser, newPicturePath);
 
-    // Step 5: Return the new path so the frontend can update the displayed image immediately
-    // We wrap it in Map.of() to produce a JSON object: { "profilePicture": "uploads/..." }
     return ResponseEntity.ok(Map.of("profilePicture", newPicturePath));
   }
 
   /**
    * Get the current user's profile picture path.
-   *
-   * <p>Returns the relative path stored in the database, or null if no picture is set.
-   * The frontend can use this path to build the full URL: backendUrl + "/" + path
    */
   @GetMapping("/profile-picture")
   @Operation(
@@ -266,16 +245,12 @@ public class UserController {
     if (currentUser == null) {
       throw new UnauthorizedException("User not authenticated");
     }
-    // Return as a JSON object: { "profilePicture": "uploads/..." } or { "profilePicture": null }
     return ResponseEntity.ok(Map.of("profilePicture",
         currentUser.getProfilePicture() != null ? currentUser.getProfilePicture() : ""));
   }
 
   /**
    * Delete the current user's profile picture.
-   *
-   * <p>Removes the file from disk and clears the path in the database.
-   * If the user has no picture, this is a no-op (returns 204 without error).
    */
   @DeleteMapping("/profile-picture")
   @Operation(
@@ -289,13 +264,8 @@ public class UserController {
       throw new UnauthorizedException("User not authenticated");
     }
 
-    // Delete the file from disk (safe to call even if profilePicture is null)
     profilePictureService.delete(currentUser.getProfilePicture());
-
-    // Clear the path in the database
     userService.removeProfilePicture(currentUser);
-
-    // 204 No Content = success, but no body to return
     return ResponseEntity.noContent().build();
   }
 }
