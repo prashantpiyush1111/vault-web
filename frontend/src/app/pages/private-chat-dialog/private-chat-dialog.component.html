@@ -76,7 +76,6 @@
         'justify-start': msg.senderUsername !== currentUsername
       }"
     >
-      <!-- Avatar (Other User) -->
       <div
         *ngIf="msg.senderUsername !== currentUsername"
         class="chat-avatar w-8 h-8 rounded-full text-white flex items-center justify-center font-semibold text-xs select-none flex-shrink-0 mr-2"
@@ -107,7 +106,6 @@
         </div>
       </div>
 
-      <!-- Avatar (Current User) -->
       <div
         *ngIf="msg.senderUsername === currentUsername"
         class="chat-avatar w-8 h-8 rounded-full text-white flex items-center justify-center font-semibold text-xs select-none flex-shrink-0 ml-2"

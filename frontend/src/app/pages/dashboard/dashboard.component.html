@@ -42,7 +42,7 @@
       </div>
     </section>
 
-    <!-- ── Profile Picture Card ─────────────────────────────────────────── -->
+    <!-- Profile Picture Card -->
     <section class="glass-card profile-picture-card">
       <header class="section-header">
         <div>
@@ -51,7 +51,6 @@
         </div>
       </header>
       <div class="profile-picture-body">
-        <!-- Left: current avatar -->
         <div class="profile-avatar-area">
           <div class="profile-avatar-circle">
             <img
@@ -68,10 +67,8 @@
           </div>
           <p class="profile-username">{{ data.profile.username }}</p>
         </div>
-        <!-- Right: upload controls -->
         <div class="profile-picture-controls">
           <p class="profile-picture-hint">JPG, PNG, or WebP · Max 2 MB</p>
-          <!-- Hidden file input triggered by the button below -->
           <input
             #fileInput
             type="file"

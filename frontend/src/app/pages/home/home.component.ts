@@ -169,7 +169,6 @@ export class HomeComponent implements OnInit {
     if (this.isEditMode) return; //Don't open chat in edit mode
     if (!this.currentUsername) return;
 
-    //get other user info
     const otherUserName =
       chat.username1 === this.currentUsername ? chat.username2 : chat.username1;
     this.selectedUsername = otherUserName;
@@ -201,7 +200,6 @@ export class HomeComponent implements OnInit {
   getOtherUsername(chat: PrivateChatDto): string {
     if (!this.currentUsername) return '';
 
-    //get other user info
     return chat.username1 === this.currentUsername
       ? chat.username2
       : chat.username1;
