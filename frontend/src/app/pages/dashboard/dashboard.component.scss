@@ -535,7 +535,7 @@
   display: flex;
   align-items: center;
   gap: 2rem;
-  flex-wrap: wrap;   // Stacks vertically on small screens
+  flex-wrap: wrap; // Stacks vertically on small screens
 }
 
 // Left side: the big circular avatar + username label underneath
@@ -565,7 +565,7 @@
 .profile-avatar-img {
   width: 100%;
   height: 100%;
-  object-fit: cover;    // Crops to fill the circle, maintains aspect ratio
+  object-fit: cover; // Crops to fill the circle, maintains aspect ratio
   display: block;
 }
 
@@ -576,7 +576,11 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  background: linear-gradient(135deg, var(--color-primary), var(--color-primary-hover, #6366f1));
+  background: linear-gradient(
+    135deg,
+    var(--color-primary),
+    var(--color-primary-hover, #6366f1)
+  );
   color: #fff;
   font-size: 2rem;
   font-weight: 700;

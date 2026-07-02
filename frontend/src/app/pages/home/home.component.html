@@ -81,10 +81,21 @@
           <!-- Avatar -->
           <div
             class="chat-avatar w-10 h-10 rounded-full text-white flex items-center justify-center font-semibold mr-4 select-none flex-shrink-0"
-            [ngClass]="{ 'overflow-hidden': getProfilePictureUrl(getOtherUser(chat)) }"
+            [ngClass]="{
+              'overflow-hidden': getProfilePictureUrl(getOtherUser(chat)),
+            }"
           >
-            <ng-container *ngIf="getProfilePictureUrl(getOtherUser(chat)) as picUrl; else noPic">
-              <img [src]="picUrl" alt="Profile" class="w-full h-full object-cover block" />
+            <ng-container
+              *ngIf="
+                getProfilePictureUrl(getOtherUser(chat)) as picUrl;
+                else noPic
+              "
+            >
+              <img
+                [src]="picUrl"
+                alt="Profile"
+                class="w-full h-full object-cover block"
+              />
             </ng-container>
             <ng-template #noPic>
               {{ getOtherUsername(chat).charAt(0).toUpperCase() }}
@@ -133,8 +144,14 @@
             class="chat-avatar w-10 h-10 rounded-full text-white flex items-center justify-center font-semibold mr-4 select-none"
             [ngClass]="{ 'overflow-hidden': getProfilePictureUrl(user) }"
           >
-            <ng-container *ngIf="getProfilePictureUrl(user) as picUrl; else noPicAll">
-              <img [src]="picUrl" alt="Profile" class="w-full h-full object-cover block" />
+            <ng-container
+              *ngIf="getProfilePictureUrl(user) as picUrl; else noPicAll"
+            >
+              <img
+                [src]="picUrl"
+                alt="Profile"
+                class="w-full h-full object-cover block"
+              />
             </ng-container>
             <ng-template #noPicAll>
               {{ user.username.charAt(0).toUpperCase() }}

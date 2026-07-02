@@ -43,7 +43,6 @@ export class NavbarComponent implements OnInit {
    * Fetches the current user's profile picture and sets the URL.
    */
   loadProfilePicture(): void {
-
     if (!this.authService.isLoggedIn()) {
       return;
     }
@@ -52,7 +51,9 @@ export class NavbarComponent implements OnInit {
       next: (res) => {
         // getProfilePictureUrl() converts "uploads/..." → "http://localhost:8080/uploads/..."
         // Returns null if res.profilePicture is empty or null
-        this.profilePictureUrl = this.userService.getProfilePictureUrl(res.profilePicture);
+        this.profilePictureUrl = this.userService.getProfilePictureUrl(
+          res.profilePicture,
+        );
       },
       error: () => {
         // If the request fails (e.g. network error), just show the fallback avatar

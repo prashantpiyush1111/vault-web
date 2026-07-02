@@ -26,7 +26,7 @@ export class UserService {
     formData.append('file', file);
     return this.http.post<{ profilePicture: string }>(
       `${this.apiUrl}/auth/profile-picture`,
-      formData
+      formData,
     );
   }
 
@@ -35,7 +35,7 @@ export class UserService {
    */
   getProfilePicture(): Observable<{ profilePicture: string }> {
     return this.http.get<{ profilePicture: string }>(
-      `${this.apiUrl}/auth/profile-picture`
+      `${this.apiUrl}/auth/profile-picture`,
     );
   }
 

@@ -212,7 +212,9 @@ export class DashboardComponent implements OnInit {
   private loadProfilePicture(): void {
     this.userService.getProfilePicture().subscribe({
       next: (res) => {
-        this.profilePictureUrl = this.userService.getProfilePictureUrl(res.profilePicture);
+        this.profilePictureUrl = this.userService.getProfilePictureUrl(
+          res.profilePicture,
+        );
       },
       error: () => {
         this.profilePictureUrl = null;
@@ -236,14 +238,17 @@ export class DashboardComponent implements OnInit {
 
     this.userService.uploadProfilePicture(file).subscribe({
       next: (res) => {
-        this.profilePictureUrl = this.userService.getProfilePictureUrl(res.profilePicture);
+        this.profilePictureUrl = this.userService.getProfilePictureUrl(
+          res.profilePicture,
+        );
         this.isUploadingPicture = false;
         this.pictureSuccess = 'Profile picture updated successfully!';
         setTimeout(() => (this.pictureSuccess = ''), 4000);
       },
       error: (err) => {
         this.isUploadingPicture = false;
-        this.pictureError = err?.error?.message || 'Upload failed. Please try again.';
+        this.pictureError =
+          err?.error?.message || 'Upload failed. Please try again.';
       },
     });
   }

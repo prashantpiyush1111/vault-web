@@ -85,7 +85,10 @@
             class="navbar-avatar-img"
           />
           <ng-template #initialAvatar>
-            <div class="navbar-avatar-initial" [title]="'Logged in as ' + (authService.getUsername() || '')">
+            <div
+              class="navbar-avatar-initial"
+              [title]="'Logged in as ' + (authService.getUsername() || '')"
+            >
               {{ usernameInitial }}
             </div>
           </ng-template>

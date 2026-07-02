@@ -83,8 +83,8 @@
             (click)="fileInput.click()"
           >
             <span *ngIf="!isUploadingPicture">
-              <i class="pi pi-upload" style="margin-right: 0.4rem;"></i>
-              {{ profilePictureUrl ? 'Change Photo' : 'Upload Photo' }}
+              <i class="pi pi-upload" style="margin-right: 0.4rem"></i>
+              {{ profilePictureUrl ? "Change Photo" : "Upload Photo" }}
             </span>
             <span *ngIf="isUploadingPicture">Uploading…</span>
           </button>
@@ -95,10 +95,12 @@
             [disabled]="isUploadingPicture"
             (click)="removeProfilePicture()"
           >
-            <i class="pi pi-trash" style="margin-right: 0.4rem;"></i>
+            <i class="pi pi-trash" style="margin-right: 0.4rem"></i>
             Remove Photo
           </button>
-          <p class="form-success" *ngIf="pictureSuccess">{{ pictureSuccess }}</p>
+          <p class="form-success" *ngIf="pictureSuccess">
+            {{ pictureSuccess }}
+          </p>
           <p class="form-error" *ngIf="pictureError">{{ pictureError }}</p>
         </div>
       </div>

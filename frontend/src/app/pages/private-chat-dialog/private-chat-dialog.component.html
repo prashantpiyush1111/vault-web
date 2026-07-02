@@ -73,7 +73,7 @@
       class="flex items-end mb-3"
       [ngClass]="{
         'justify-end': msg.senderUsername === currentUsername,
-        'justify-start': msg.senderUsername !== currentUsername
+        'justify-start': msg.senderUsername !== currentUsername,
       }"
     >
       <div
@@ -81,8 +81,14 @@
         class="chat-avatar w-8 h-8 rounded-full text-white flex items-center justify-center font-semibold text-xs select-none flex-shrink-0 mr-2"
         [ngClass]="{ 'overflow-hidden': getAvatarPicUrl(msg.senderUsername) }"
       >
-        <ng-container *ngIf="getAvatarPicUrl(msg.senderUsername) as picUrl; else noPicOther">
-          <img [src]="picUrl" alt="Profile" class="w-full h-full object-cover block" />
+        <ng-container
+          *ngIf="getAvatarPicUrl(msg.senderUsername) as picUrl; else noPicOther"
+        >
+          <img
+            [src]="picUrl"
+            alt="Profile"
+            class="w-full h-full object-cover block"
+          />
         </ng-container>
         <ng-template #noPicOther>
           {{ getAvatarFallback(msg.senderUsername) }}
@@ -111,8 +117,17 @@
         class="chat-avatar w-8 h-8 rounded-full text-white flex items-center justify-center font-semibold text-xs select-none flex-shrink-0 ml-2"
         [ngClass]="{ 'overflow-hidden': getAvatarPicUrl(msg.senderUsername) }"
       >
-        <ng-container *ngIf="getAvatarPicUrl(msg.senderUsername) as picUrl; else noPicCurrent">
-          <img [src]="picUrl" alt="Profile" class="w-full h-full object-cover block" />
+        <ng-container
+          *ngIf="
+            getAvatarPicUrl(msg.senderUsername) as picUrl;
+            else noPicCurrent
+          "
+        >
+          <img
+            [src]="picUrl"
+            alt="Profile"
+            class="w-full h-full object-cover block"
+          />
         </ng-container>
         <ng-template #noPicCurrent>
           {{ getAvatarFallback(msg.senderUsername) }}
