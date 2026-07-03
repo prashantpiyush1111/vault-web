@@ -586,12 +586,17 @@ export class CloudComponent implements OnInit {
   onExternalDragOver(event: DragEvent) {
     if (this.draggedPath) return;
 
+    const isFileDrag =
+      !!event.dataTransfer &&
+      Array.from(event.dataTransfer.types).includes('Files');
+
+    if (!isFileDrag) {
+      return;
+    }
+
     event.preventDefault();
     this.isExternalDrag = true;
-
-    if (event.dataTransfer) {
-      event.dataTransfer.dropEffect = 'copy';
-    }
+    event.dataTransfer!.dropEffect = 'copy';
   }
   onExternalDragLeave(event: DragEvent) {
     const currentTarget = event.currentTarget as HTMLElement;
