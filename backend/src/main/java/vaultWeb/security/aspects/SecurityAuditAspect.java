@@ -58,7 +58,8 @@ public class SecurityAuditAspect {
       JoinPoint joinPoint, AuditSecurityEvent auditSecurityEvent, Object result) {
     if (auditSecurityEvent.value() == SecurityEventType.NEW_DEVICE_DETECTED) {
       if (result instanceof vaultWeb.dtos.DeviceDto deviceDto) {
-        if (deviceDto.getCreatedAt() != null && deviceDto.getLastSeen() != null
+        if (deviceDto.getCreatedAt() != null
+            && deviceDto.getLastSeen() != null
             && !deviceDto.getCreatedAt().equals(deviceDto.getLastSeen())) {
           // Do not log NEW_DEVICE_DETECTED on updates
           return;

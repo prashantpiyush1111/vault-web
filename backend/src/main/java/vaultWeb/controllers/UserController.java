@@ -242,7 +242,8 @@ public class UserController {
     }
 
     // Limit logging from client-side to only vault lock/unlock events
-    if (eventType != SecurityEventType.VAULT_UNLOCKED && eventType != SecurityEventType.VAULT_LOCKED) {
+    if (eventType != SecurityEventType.VAULT_UNLOCKED
+        && eventType != SecurityEventType.VAULT_LOCKED) {
       return ResponseEntity.badRequest().build();
     }
 

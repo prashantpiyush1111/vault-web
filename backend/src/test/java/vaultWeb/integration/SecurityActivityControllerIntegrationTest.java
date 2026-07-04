@@ -8,13 +8,11 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-import com.fasterxml.jackson.databind.JsonNode;
 import java.util.List;
 import java.util.Map;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.MediaType;
-import org.springframework.test.web.servlet.MvcResult;
 import vaultWeb.models.SecurityEvent;
 import vaultWeb.models.User;
 import vaultWeb.security.JwtUtil;
@@ -41,8 +39,7 @@ class SecurityActivityControllerIntegrationTest extends IntegrationTestBase {
 
   @Test
   void testGetSecurityActivity_Unauthorized() throws Exception {
-    mockMvc.perform(get("/api/auth/security-activity"))
-        .andExpect(status().isUnauthorized());
+    mockMvc.perform(get("/api/auth/security-activity")).andExpect(status().isUnauthorized());
   }
 
   @Test
@@ -73,8 +70,8 @@ class SecurityActivityControllerIntegrationTest extends IntegrationTestBase {
     event2.setLocation("Localhost");
     securityEventRepository.save(event2);
 
-    mockMvc.perform(get("/api/auth/security-activity")
-            .header("Authorization", authHeader))
+    mockMvc
+        .perform(get("/api/auth/security-activity").header("Authorization", authHeader))
         .andExpect(status().isOk())
         .andExpect(jsonPath("$", hasSize(2)))
         .andExpect(jsonPath("$[0].eventType").value("PASSWORD_CHANGE"))
@@ -88,10 +85,12 @@ class SecurityActivityControllerIntegrationTest extends IntegrationTestBase {
 
     Map<String, String> payload = Map.of("eventType", "VAULT_UNLOCKED");
 
-    mockMvc.perform(post("/api/auth/security-activity/log")
-            .header("Authorization", authHeader)
-            .contentType(MediaType.APPLICATION_JSON)
-            .content(objectMapper.writeValueAsString(payload)))
+    mockMvc
+        .perform(
+            post("/api/auth/security-activity/log")
+                .header("Authorization", authHeader)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(payload)))
         .andExpect(status().isOk());
 
     List<SecurityEvent> events = securityEventRepository.findAll();
@@ -110,19 +109,23 @@ class SecurityActivityControllerIntegrationTest extends IntegrationTestBase {
     // Try logging LOGIN, which is server-only and should be blocked from client endpoint
     Map<String, String> payload = Map.of("eventType", "LOGIN");
 
-    mockMvc.perform(post("/api/auth/security-activity/log")
-            .header("Authorization", authHeader)
-            .contentType(MediaType.APPLICATION_JSON)
-            .content(objectMapper.writeValueAsString(payload)))
+    mockMvc
+        .perform(
+            post("/api/auth/security-activity/log")
+                .header("Authorization", authHeader)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(payload)))
         .andExpect(status().isBadRequest());
 
     // Try logging invalid event
     Map<String, String> payload2 = Map.of("eventType", "INVALID_EVENT");
 
-    mockMvc.perform(post("/api/auth/security-activity/log")
-            .header("Authorization", authHeader)
-            .contentType(MediaType.APPLICATION_JSON)
-            .content(objectMapper.writeValueAsString(payload2)))
+    mockMvc
+        .perform(
+            post("/api/auth/security-activity/log")
+                .header("Authorization", authHeader)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(payload2)))
         .andExpect(status().isBadRequest());
 
     List<SecurityEvent> events = securityEventRepository.findAll();
