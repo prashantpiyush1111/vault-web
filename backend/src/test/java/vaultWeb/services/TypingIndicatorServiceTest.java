@@ -130,6 +130,22 @@ class TypingIndicatorServiceTest {
   }
 
   @Test
+  void shouldRejectMissingTypingEventPayload() {
+    assertThrows(
+        IllegalArgumentException.class,
+        () -> typingIndicatorService.handleTypingEvent(null, alicePrincipal, "s1"));
+  }
+
+  @Test
+  void shouldRejectUnsupportedTypingEventType() {
+    TypingIndicatorDto event = privateTyping("typing_pause");
+
+    assertThrows(
+        IllegalArgumentException.class,
+        () -> typingIndicatorService.handleTypingEvent(event, alicePrincipal, "s1"));
+  }
+
+  @Test
   void shouldRelayGroupTypingToOtherMembers() {
     User alice = user(1L, "alice");
     User bob = user(2L, "bob");

@@ -45,6 +45,10 @@ public class TypingIndicatorService {
   private final Map<String, Set<TypingKey>> keysBySession = new ConcurrentHashMap<>();
 
   public void handleTypingEvent(TypingIndicatorDto event, Principal principal, String sessionId) {
+    if (event == null) {
+      throw new IllegalArgumentException("Typing event is required");
+    }
+
     if (principal == null || principal.getName() == null) {
       throw new AccessDeniedException("WebSocket user is not authenticated");
     }
@@ -56,7 +60,10 @@ public class TypingIndicatorService {
 
     if (TYPING_STOP.equals(event.getType())) {
       handleTypingStop(event, principal.getName(), sessionId);
+      return;
     }
+
+    throw new IllegalArgumentException("Unsupported typing event type");
   }
 
   public void handleDisconnect(String sessionId) {
@@ -201,8 +208,14 @@ public class TypingIndicatorService {
 
   private record TypingTarget(Long privateChatId, Long groupId, Set<String> recipientUsernames) {
     static TypingTarget privateChat(PrivateChat chat) {
-      return new TypingTarget(
-          chat.getId(), null, Set.of(chat.getUser1().getUsername(), chat.getUser2().getUsername()));
+      Set<String> recipients = ConcurrentHashMap.newKeySet();
+      if (chat.getUser1() != null && chat.getUser1().getUsername() != null) {
+        recipients.add(chat.getUser1().getUsername());
+      }
+      if (chat.getUser2() != null && chat.getUser2().getUsername() != null) {
+        recipients.add(chat.getUser2().getUsername());
+      }
+      return new TypingTarget(chat.getId(), null, recipients);
     }
 
     static TypingTarget group(Group group, Iterable<GroupMember> members) {
