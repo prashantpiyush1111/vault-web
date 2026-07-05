@@ -50,24 +50,44 @@
           <h2>Your photo</h2>
         </div>
       </header>
-      <div class="profile-picture-body">
-        <div class="profile-avatar-area">
-          <div class="profile-avatar-circle">
+      <div
+        style="display: flex; align-items: center; gap: 1rem; flex-wrap: wrap"
+      >
+        <div style="display: grid; gap: 0.6rem; justify-items: center">
+          <div
+            style="
+              width: 5.5rem;
+              aspect-ratio: 1;
+              border-radius: 50%;
+              overflow: hidden;
+            "
+          >
             <img
               *ngIf="profilePictureUrl; else dashboardInitial"
               [src]="profilePictureUrl"
               alt="Your profile picture"
-              class="profile-avatar-img"
+              style="width: 100%; height: 100%; object-fit: cover"
             />
             <ng-template #dashboardInitial>
-              <div class="profile-avatar-initial">
+              <div
+                style="
+                  width: 100%;
+                  height: 100%;
+                  display: grid;
+                  place-items: center;
+                  background: var(--color-primary-strong);
+                  color: #fff;
+                  font-size: 2rem;
+                  font-weight: 700;
+                "
+              >
                 {{ data.profile.username.charAt(0).toUpperCase() }}
               </div>
             </ng-template>
           </div>
           <p class="profile-username">{{ data.profile.username }}</p>
         </div>
-        <div class="profile-picture-controls">
+        <div style="display: grid; gap: 0.75rem; flex: 1">
           <p class="profile-picture-hint">JPG, PNG, or WebP · Max 2 MB</p>
           <input
             #fileInput
@@ -90,7 +110,7 @@
           </button>
           <button
             *ngIf="profilePictureUrl"
-            class="danger-btn"
+            class="primary-btn"
             type="button"
             [disabled]="isUploadingPicture"
             (click)="removeProfilePicture()"
