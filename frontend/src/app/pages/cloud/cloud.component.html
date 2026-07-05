@@ -129,7 +129,14 @@
     {{ error }}
   </div>
 
-  <section *ngIf="currentFolder && !loading" class="cloud-table-wrap">
+  <section
+    *ngIf="currentFolder && !loading"
+    class="cloud-table-wrap"
+    [class.drag-over]="isExternalDrag"
+    (dragover)="onExternalDragOver($event)"
+    (dragleave)="onExternalDragLeave($event)"
+    (drop)="onExternalDrop($event)"
+  >
     <p-table
       [value]="entries"
       [lazy]="!searchActive"

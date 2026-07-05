@@ -139,7 +139,6 @@
   border-color: color-mix(in srgb, #ef4444 45%, var(--color-border));
   background: color-mix(in srgb, #ef4444 10%, transparent);
 }
-
 .cloud-table-wrap {
   border-radius: 1rem;
   border: 1px solid var(--color-border);
@@ -147,6 +146,18 @@
   box-shadow: 0 6px 14px -14px var(--color-shadow-md);
   overflow-x: auto;
   overflow-y: hidden;
+  transition:
+    border-color 0.2s ease,
+    box-shadow 0.2s ease,
+    background-color 0.2s ease;
+}
+
+// Highlight the table while external files are dragged over it.
+.cloud-table-wrap.drag-over {
+  border-color: var(--color-primary);
+  background: color-mix(in srgb, var(--color-primary) 8%, var(--color-surface));
+  box-shadow: 0 0 0 2px
+    color-mix(in srgb, var(--color-primary) 25%, transparent);
 }
 
 :host ::ng-deep .cloud-table .p-datatable-table {

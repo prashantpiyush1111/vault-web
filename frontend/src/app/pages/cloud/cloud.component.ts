@@ -104,6 +104,7 @@ export class CloudComponent implements OnInit {
   private draggedPath: string | null = null;
   private draggedIsFolder = false;
   draggedOverPath: string | null = null;
+  isExternalDrag = false;
 
   constructor(
     private cloudService: CloudService,
@@ -581,6 +582,50 @@ export class CloudComponent implements OnInit {
     }
 
     input.value = '';
+  }
+  onExternalDragOver(event: DragEvent) {
+    if (this.draggedPath) return;
+
+    const isFileDrag =
+      !!event.dataTransfer &&
+      Array.from(event.dataTransfer.types).includes('Files');
+
+    if (!isFileDrag) {
+      return;
+    }
+
+    event.preventDefault();
+    this.isExternalDrag = true;
+    event.dataTransfer!.dropEffect = 'copy';
+  }
+  onExternalDragLeave(event: DragEvent) {
+    const currentTarget = event.currentTarget as HTMLElement;
+    const relatedTarget = event.relatedTarget as Node | null;
+
+    if (!relatedTarget || !currentTarget.contains(relatedTarget)) {
+      this.isExternalDrag = false;
+    }
+  }
+
+  onExternalDrop(event: DragEvent) {
+    event.preventDefault();
+    this.isExternalDrag = false;
+
+    if (this.draggedPath) {
+      return;
+    }
+
+    const files = event.dataTransfer?.files;
+
+    if (!files || files.length === 0) {
+      return;
+    }
+
+    const currentPath = this.getRelativePath(this.currentFolder?.path || '/');
+
+    for (const file of Array.from(files)) {
+      this.uploadFile(currentPath, file);
+    }
   }
 
   confirmDeleteFolder(folderPath: string) {
