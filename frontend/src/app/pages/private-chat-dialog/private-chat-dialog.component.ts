@@ -14,6 +14,7 @@ import {
 } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { ChatMessageDto } from '../../models/dtos/ChatMessageDto';
+import { TypingIndicatorDto } from '../../models/dtos/TypingIndicatorDto';
 import { WebSocketService } from '../../services/web-socket.service';
 import { PrivateChatService } from '../../services/private-chat.service';
 import { Subscription } from 'rxjs/internal/Subscription';
@@ -61,6 +62,7 @@ export class PrivateChatDialogComponent
     ElementRef<HTMLDivElement>
   >;
   private privateMessageSub!: Subscription;
+  private typingIndicatorSub!: Subscription;
 
   private shouldScroll = false;
   isSearchOpen = false;
@@ -68,6 +70,12 @@ export class PrivateChatDialogComponent
   matchedMessageIndexes: number[] = [];
   private matchedMessageIndexSet = new Set<number>();
   activeMatchPosition = -1;
+  private isTyping = false;
+  private typingIdleTimer: ReturnType<typeof setTimeout> | null = null;
+  private typingStaleSweepTimer: ReturnType<typeof setInterval> | null = null;
+  private readonly typingIdleTimeoutMs = 5000;
+  private readonly typingStaleTimeoutMs = 8000;
+  private readonly typingUsers = new Map<string, number>();
 
   constructor(
     private wsService: WebSocketService,
@@ -96,11 +104,22 @@ export class PrivateChatDialogComponent
         }
       });
 
+    this.typingIndicatorSub = this.wsService
+      .subscribeToTypingIndicators()
+      .subscribe((event) => this.handleTypingIndicator(event));
+    this.typingStaleSweepTimer = setInterval(
+      () => this.removeStaleTypingUsers(),
+      2000,
+    );
+
     void this.initializeE2ee();
   }
 
   ngOnDestroy(): void {
+    this.stopTyping();
     this.privateMessageSub?.unsubscribe();
+    this.typingIndicatorSub?.unsubscribe();
+    this.clearTypingTimers();
   }
 
   ngAfterViewChecked(): void {
@@ -122,11 +141,45 @@ export class PrivateChatDialogComponent
   sendMessage(): void {
     if (!this.newMessage.trim()) return;
 
+    this.stopTyping();
     void this.sendEncryptedMessage(this.newMessage);
   }
 
   onClose(): void {
+    this.stopTyping();
     this.closeChat.emit();
+  }
+
+  onComposerInput(value: string): void {
+    if (!value.trim()) {
+      this.stopTyping();
+      return;
+    }
+
+    if (!this.isTyping) {
+      this.isTyping = true;
+      this.sendTypingEvent('typing_start');
+    }
+
+    this.resetTypingIdleTimer();
+  }
+
+  get typingIndicatorLabel(): string {
+    const names = Array.from(this.typingUsers.keys());
+
+    if (names.length === 0) {
+      return '';
+    }
+
+    if (names.length === 1) {
+      return `${names[0]} is typing...`;
+    }
+
+    if (names.length === 2) {
+      return `${names[0]} and ${names[1]} are typing...`;
+    }
+
+    return 'Several people are typing...';
   }
 
   private async initializeE2ee(): Promise<void> {
@@ -198,6 +251,9 @@ export class PrivateChatDialogComponent
           return;
         }
         this.messages.push(viewMessage);
+        if (viewMessage.senderUsername !== this.currentUsername) {
+          this.typingUsers.delete(viewMessage.senderUsername ?? '');
+        }
         this.applySearch();
         this.shouldScroll = !this.searchQuery.trim();
       })
@@ -441,5 +497,79 @@ export class PrivateChatDialogComponent
         existing.senderUsername === message.senderUsername &&
         existing.timestamp === message.timestamp,
     );
+  }
+
+  private handleTypingIndicator(event: TypingIndicatorDto): void {
+    if (
+      event.privateChatId !== this.privateChatId ||
+      !event.username ||
+      event.username === this.currentUsername
+    ) {
+      return;
+    }
+
+    if (event.type === 'typing_start') {
+      this.typingUsers.set(
+        event.username,
+        Date.now() + this.typingStaleTimeoutMs,
+      );
+      return;
+    }
+
+    if (event.type === 'typing_stop') {
+      this.typingUsers.delete(event.username);
+    }
+  }
+
+  private resetTypingIdleTimer(): void {
+    if (this.typingIdleTimer) {
+      clearTimeout(this.typingIdleTimer);
+    }
+    this.typingIdleTimer = setTimeout(
+      () => this.stopTyping(),
+      this.typingIdleTimeoutMs,
+    );
+  }
+
+  private stopTyping(): void {
+    if (this.typingIdleTimer) {
+      clearTimeout(this.typingIdleTimer);
+      this.typingIdleTimer = null;
+    }
+
+    if (!this.isTyping) {
+      return;
+    }
+
+    this.isTyping = false;
+    this.sendTypingEvent('typing_stop');
+  }
+
+  private sendTypingEvent(type: TypingIndicatorDto['type']): void {
+    this.wsService.sendTypingIndicator({
+      type,
+      privateChatId: this.privateChatId,
+      groupId: null,
+    });
+  }
+
+  private removeStaleTypingUsers(): void {
+    const now = Date.now();
+    Array.from(this.typingUsers.entries()).forEach(([username, expiresAt]) => {
+      if (expiresAt <= now) {
+        this.typingUsers.delete(username);
+      }
+    });
+  }
+
+  private clearTypingTimers(): void {
+    if (this.typingIdleTimer) {
+      clearTimeout(this.typingIdleTimer);
+      this.typingIdleTimer = null;
+    }
+    if (this.typingStaleSweepTimer) {
+      clearInterval(this.typingStaleSweepTimer);
+      this.typingStaleSweepTimer = null;
+    }
   }
 }

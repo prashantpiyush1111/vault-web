@@ -207,6 +207,12 @@ button {
   color: var(--color-text-muted);
 }
 
+.typing-indicator {
+  color: var(--color-text-muted);
+  min-height: 1.25rem;
+  padding: 0.25rem 0.15rem 0;
+}
+
 .chat-input-row {
   border-top-color: var(--color-border);
   background: var(--color-surface);
