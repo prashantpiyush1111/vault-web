@@ -76,6 +76,24 @@
           <i *ngIf="!isDarkTheme" class="pi pi-moon"></i>
         </button>
 
+        <!-- User Avatar -->
+        <div class="navbar-avatar-wrapper">
+          <img
+            *ngIf="profilePictureUrl; else initialAvatar"
+            [src]="profilePictureUrl"
+            alt="Your profile picture"
+            class="navbar-avatar-img"
+          />
+          <ng-template #initialAvatar>
+            <div
+              class="navbar-avatar-initial"
+              [title]="'Logged in as ' + (authService.getUsername() || '')"
+            >
+              {{ usernameInitial }}
+            </div>
+          </ng-template>
+        </div>
+
         <button type="button" class="logout-btn" (click)="logout()">
           Logout
         </button>
@@ -149,8 +167,24 @@
       </a>
     </div>
 
-    <button type="button" class="mobile-logout" (click)="logout()">
-      Logout
-    </button>
+    <!-- Mobile avatar + logout -->
+    <div class="mobile-avatar-logout">
+      <div class="navbar-avatar-wrapper">
+        <img
+          *ngIf="profilePictureUrl; else mobileInitialAvatar"
+          [src]="profilePictureUrl"
+          alt="Your profile picture"
+          class="navbar-avatar-img"
+        />
+        <ng-template #mobileInitialAvatar>
+          <div class="navbar-avatar-initial">
+            {{ usernameInitial }}
+          </div>
+        </ng-template>
+      </div>
+      <button type="button" class="mobile-logout" (click)="logout()">
+        Logout
+      </button>
+    </div>
   </div>
 </nav>

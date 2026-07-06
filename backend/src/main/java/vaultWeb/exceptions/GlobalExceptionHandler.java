@@ -120,6 +120,16 @@ public class GlobalExceptionHandler {
     return error(HttpStatus.BAD_REQUEST, "INVALID_REQUEST", "Invalid request");
   }
 
+  /**
+   * Handles InvalidFileException (bad upload type or size) and returns 400 Bad Request. The message
+   * from the exception is safe to surface to the client (we wrote it ourselves).
+   */
+  @ExceptionHandler(InvalidFileException.class)
+  public ResponseEntity<ApiErrorResponse> handleInvalidFile(InvalidFileException ex) {
+    log.warn("Invalid file upload attempt", ex);
+    return error(HttpStatus.BAD_REQUEST, "INVALID_FILE", ex.getMessage());
+  }
+
   /** Handles DecryptionFailedException and returns 500 Internal Server Error. */
   @ExceptionHandler(DecryptionFailedException.class)
   public ResponseEntity<ApiErrorResponse> handleDecryptionFailed(DecryptionFailedException ex) {

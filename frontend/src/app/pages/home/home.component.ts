@@ -169,7 +169,6 @@ export class HomeComponent implements OnInit {
     if (this.isEditMode) return; //Don't open chat in edit mode
     if (!this.currentUsername) return;
 
-    //get other user info
     const otherUserName =
       chat.username1 === this.currentUsername ? chat.username2 : chat.username1;
     this.selectedUsername = otherUserName;
@@ -201,7 +200,6 @@ export class HomeComponent implements OnInit {
   getOtherUsername(chat: PrivateChatDto): string {
     if (!this.currentUsername) return '';
 
-    //get other user info
     return chat.username1 === this.currentUsername
       ? chat.username2
       : chat.username1;
@@ -325,5 +323,24 @@ export class HomeComponent implements OnInit {
 
   displayUsername(username: string): string {
     return username === this.currentUsername ? `${username} (You)` : username;
+  }
+
+  getOtherUser(chat: PrivateChatDto): UserDto | undefined {
+    const otherUserName = this.getOtherUsername(chat);
+    return this.getUserByUsername(otherUserName);
+  }
+
+  getUserByUsername(username: string): UserDto | undefined {
+    return this.users.find((u) => u.username === username);
+  }
+
+  getCurrentUser(): UserDto | undefined {
+    if (!this.currentUsername) return undefined;
+    return this.getUserByUsername(this.currentUsername);
+  }
+
+  getProfilePictureUrl(user: UserDto | undefined): string | null {
+    if (!user || !user.profilePicture) return null;
+    return this.userService.getProfilePictureUrl(user.profilePicture);
   }
 }

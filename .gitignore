@@ -77,3 +77,6 @@ docker-compose.override.yml
 build/
 
 # JetBrains IDE specific
+
+# File Uploads
+backend/uploads/

@@ -42,6 +42,90 @@
       </div>
     </section>
 
+    <!-- Profile Picture Card -->
+    <section class="glass-card profile-picture-card">
+      <header class="section-header">
+        <div>
+          <p class="eyebrow">Profile</p>
+          <h2>Your photo</h2>
+        </div>
+      </header>
+      <div
+        style="display: flex; align-items: center; gap: 1rem; flex-wrap: wrap"
+      >
+        <div style="display: grid; gap: 0.6rem; justify-items: center">
+          <div
+            style="
+              width: 5.5rem;
+              aspect-ratio: 1;
+              border-radius: 50%;
+              overflow: hidden;
+            "
+          >
+            <img
+              *ngIf="profilePictureUrl; else dashboardInitial"
+              [src]="profilePictureUrl"
+              alt="Your profile picture"
+              style="width: 100%; height: 100%; object-fit: cover"
+            />
+            <ng-template #dashboardInitial>
+              <div
+                style="
+                  width: 100%;
+                  height: 100%;
+                  display: grid;
+                  place-items: center;
+                  background: var(--color-primary-strong);
+                  color: #fff;
+                  font-size: 2rem;
+                  font-weight: 700;
+                "
+              >
+                {{ data.profile.username.charAt(0).toUpperCase() }}
+              </div>
+            </ng-template>
+          </div>
+          <p class="profile-username">{{ data.profile.username }}</p>
+        </div>
+        <div style="display: grid; gap: 0.75rem; flex: 1">
+          <p class="profile-picture-hint">JPG, PNG, or WebP · Max 2 MB</p>
+          <input
+            #fileInput
+            type="file"
+            accept="image/jpeg,image/png,image/webp"
+            style="display: none"
+            (change)="onProfilePictureSelected($event)"
+          />
+          <button
+            class="primary-btn upload-btn"
+            type="button"
+            [disabled]="isUploadingPicture"
+            (click)="fileInput.click()"
+          >
+            <span *ngIf="!isUploadingPicture">
+              <i class="pi pi-upload" style="margin-right: 0.4rem"></i>
+              {{ profilePictureUrl ? "Change Photo" : "Upload Photo" }}
+            </span>
+            <span *ngIf="isUploadingPicture">Uploading…</span>
+          </button>
+          <button
+            *ngIf="profilePictureUrl"
+            class="primary-btn"
+            type="button"
+            [disabled]="isUploadingPicture"
+            (click)="removeProfilePicture()"
+          >
+            <i class="pi pi-trash" style="margin-right: 0.4rem"></i>
+            Remove Photo
+          </button>
+          <p class="form-success" *ngIf="pictureSuccess">
+            {{ pictureSuccess }}
+          </p>
+          <p class="form-error" *ngIf="pictureError">{{ pictureError }}</p>
+        </div>
+      </div>
+    </section>
+
     <div class="content-grid">
       <div class="primary-column space-y-6">
         <section class="glass-card">
@@ -361,5 +445,6 @@
   [username]="selectedGroup.name"
   [currentUsername]="currentUsername"
   [groupId]="selectedGroup.id"
+  [currentUserPicUrl]="profilePictureUrl"
   (closeChat)="closeGroupChat()"
 />

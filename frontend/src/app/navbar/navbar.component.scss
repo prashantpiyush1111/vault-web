@@ -218,6 +218,65 @@
   font-weight: 600;
 }
 
+/* ── Profile Picture Avatar Styles ─────────────────────────────────────────── */
+
+// Wrapper keeps the avatar exactly square and circular at all times
+.navbar-avatar-wrapper {
+  width: 34px;
+  height: 34px;
+  border-radius: 50%; // Makes it a circle
+  overflow: hidden; // Clips the image/text to the circle shape
+  flex-shrink: 0; // Prevents it from being squished in flex layouts
+  border: 2px solid var(--color-border);
+  cursor: default;
+  transition: border-color 0.2s ease;
+
+  &:hover {
+    border-color: var(--color-primary);
+  }
+}
+
+// Shown when the user HAS a profile picture
+.navbar-avatar-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover; // Crops the image to fill the circle without stretching
+  display: block;
+}
+
+// Shown when the user has NO profile picture — displays their initial letter
+.navbar-avatar-initial {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  // A subtle gradient that works in both light and dark themes
+  background: linear-gradient(
+    135deg,
+    var(--color-primary),
+    var(--color-primary-hover, #6366f1)
+  );
+  color: #fff;
+  font-size: 0.8rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  user-select: none; // Prevents accidental text selection on click
+}
+
+// Mobile: wraps the avatar and logout button in a horizontal flex row
+.mobile-avatar-logout {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin-top: 0.75rem;
+
+  .mobile-logout {
+    margin-top: 0; // Override the default top margin when inside this flex row
+    flex: 1; // The logout button takes remaining space
+  }
+}
+
 @media (max-width: 768px) {
   .navbar-bg {
     box-shadow: 1px 5px 10px var(--color-navbar-shadow);

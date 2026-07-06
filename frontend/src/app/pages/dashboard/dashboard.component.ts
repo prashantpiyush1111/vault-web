@@ -12,6 +12,7 @@ import { Router } from '@angular/router';
 import { DashboardService } from '../../services/dashboard.service';
 import { UserDashboardDto } from '../../models/dtos/UserDashboardDto';
 import { AuthService } from '../../services/auth.service';
+import { UserService } from '../../services/user.service';
 import {
   GroupSummary,
   MessagePreview,
@@ -50,18 +51,26 @@ export class DashboardComponent implements OnInit {
   private readonly passwordComplexity =
     /(?=.*[A-Z])(?=.*\d)(?=.*[^A-Za-z0-9]).+/;
 
+  // ── Profile Picture State ────────────────────────────────────────────────
+  profilePictureUrl: string | null = null;
+  isUploadingPicture = false;
+  pictureSuccess = '';
+  pictureError = '';
+
   constructor(
     private dashboardService: DashboardService,
     private fb: FormBuilder,
     private authService: AuthService,
     private router: Router,
     private toast: UiToastService,
+    private userService: UserService,
   ) {
     this.passwordForm = this.createPasswordForm();
   }
 
   ngOnInit(): void {
     this.loadDashboard();
+    this.loadProfilePicture();
   }
 
   retry(): void {
@@ -235,6 +244,77 @@ export class DashboardComponent implements OnInit {
       return true;
     }
     return new Date(deadline).getTime() >= Date.now();
+  }
+
+  // ── Profile Picture Methods ───────────────────────────────────────────────
+
+  /**
+   * Loads the current user's profile picture from the backend.
+   */
+  private loadProfilePicture(): void {
+    this.userService.getProfilePicture().subscribe({
+      next: (res) => {
+        this.profilePictureUrl = this.userService.getProfilePictureUrl(
+          res.profilePicture,
+        );
+      },
+      error: () => {
+        this.profilePictureUrl = null;
+      },
+    });
+  }
+
+  /**
+   * Called when the user selects a file to upload.
+   */
+  onProfilePictureSelected(event: Event): void {
+    const input = event.target as HTMLInputElement;
+    if (!input.files || input.files.length === 0) {
+      return;
+    }
+
+    const file = input.files[0];
+    this.pictureSuccess = '';
+    this.pictureError = '';
+    this.isUploadingPicture = true;
+
+    this.userService.uploadProfilePicture(file).subscribe({
+      next: (res) => {
+        this.profilePictureUrl = this.userService.getProfilePictureUrl(
+          res.profilePicture,
+        );
+        this.isUploadingPicture = false;
+        this.pictureSuccess = 'Profile picture updated successfully!';
+        setTimeout(() => (this.pictureSuccess = ''), 4000);
+      },
+      error: (err) => {
+        this.isUploadingPicture = false;
+        this.pictureError =
+          err?.error?.message || 'Upload failed. Please try again.';
+      },
+    });
+  }
+
+  /**
+   * Called when the user clicks "Remove Photo".
+   */
+  removeProfilePicture(): void {
+    this.pictureSuccess = '';
+    this.pictureError = '';
+    this.isUploadingPicture = true;
+
+    this.userService.deleteProfilePicture().subscribe({
+      next: () => {
+        this.profilePictureUrl = null;
+        this.isUploadingPicture = false;
+        this.pictureSuccess = 'Profile picture removed.';
+        setTimeout(() => (this.pictureSuccess = ''), 4000);
+      },
+      error: () => {
+        this.isUploadingPicture = false;
+        this.pictureError = 'Could not remove the picture. Please try again.';
+      },
+    });
   }
 
   private loadDashboard(isRetry = false): void {

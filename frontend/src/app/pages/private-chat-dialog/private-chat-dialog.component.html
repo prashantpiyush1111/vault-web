@@ -70,12 +70,31 @@
   >
     <div
       *ngFor="let msg of messages; let i = index"
-      class="flex"
+      class="flex items-end mb-3"
       [ngClass]="{
         'justify-end': msg.senderUsername === currentUsername,
         'justify-start': msg.senderUsername !== currentUsername,
       }"
     >
+      <div
+        *ngIf="msg.senderUsername !== currentUsername"
+        class="chat-avatar w-8 h-8 rounded-full text-white flex items-center justify-center font-semibold text-xs select-none flex-shrink-0 mr-2"
+        [ngClass]="{ 'overflow-hidden': getAvatarPicUrl(msg.senderUsername) }"
+      >
+        <ng-container
+          *ngIf="getAvatarPicUrl(msg.senderUsername) as picUrl; else noPicOther"
+        >
+          <img
+            [src]="picUrl"
+            alt="Profile"
+            class="w-full h-full object-cover block"
+          />
+        </ng-container>
+        <ng-template #noPicOther>
+          {{ getAvatarFallback(msg.senderUsername) }}
+        </ng-template>
+      </div>
+
       <div
         #messageBubble
         class="chat-bubble max-w-[75%] px-4 py-2 rounded-xl text-sm break-words"
@@ -100,6 +119,28 @@
         <div class="message-time">
           {{ msg.timestamp | date: "shortTime" }}
         </div>
+      </div>
+
+      <div
+        *ngIf="msg.senderUsername === currentUsername"
+        class="chat-avatar w-8 h-8 rounded-full text-white flex items-center justify-center font-semibold text-xs select-none flex-shrink-0 ml-2"
+        [ngClass]="{ 'overflow-hidden': getAvatarPicUrl(msg.senderUsername) }"
+      >
+        <ng-container
+          *ngIf="
+            getAvatarPicUrl(msg.senderUsername) as picUrl;
+            else noPicCurrent
+          "
+        >
+          <img
+            [src]="picUrl"
+            alt="Profile"
+            class="w-full h-full object-cover block"
+          />
+        </ng-container>
+        <ng-template #noPicCurrent>
+          {{ getAvatarFallback(msg.senderUsername) }}
+        </ng-template>
       </div>
     </div>
 

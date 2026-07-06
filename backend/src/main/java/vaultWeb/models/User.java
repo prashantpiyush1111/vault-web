@@ -23,6 +23,14 @@ public class User {
   private String username;
   private String password;
 
+  // Stores the relative file path to the user's profile picture.
+  // Example value: "uploads/profile-pictures/42_abc123.jpg"
+  // This will be null if the user has never uploaded a picture — that's perfectly fine!
+  // The @Column annotation with nullable=true makes this explicit (null is the default anyway,
+  // but being explicit makes the code easier to understand).
+  @Column(nullable = true)
+  private String profilePicture;
+
   @OneToMany(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true)
   @JsonIgnore
   private List<GroupMember> groupMemberships;
