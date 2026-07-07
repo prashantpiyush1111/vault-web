@@ -13,6 +13,7 @@ import vaultWeb.dtos.PollResponseDto;
 import vaultWeb.exceptions.notfound.GroupNotFoundException;
 import vaultWeb.models.Group;
 import vaultWeb.models.Poll;
+import vaultWeb.models.PollContext;
 import vaultWeb.models.User;
 import vaultWeb.services.GroupService;
 import vaultWeb.services.PollService;
@@ -20,12 +21,12 @@ import vaultWeb.services.auth.AuthService;
 
 /**
  * Controller for managing polls within a specific group. All endpoints are prefixed with
- * /groups/{groupId}/polls.
+ * /api/groups/{groupId}/polls.
  */
 @RestController
-@RequestMapping("/groups/{groupId}/polls")
+@RequestMapping("/api/groups/{groupId}/polls")
 @RequiredArgsConstructor
-public class PollController {
+public class GroupChatPollController {
 
   private final GroupService groupService;
   private final PollService pollService;
@@ -59,7 +60,9 @@ public class PollController {
             .getGroupById(groupId)
             .orElseThrow(
                 () -> new GroupNotFoundException("Group with id " + groupId + " not found"));
-    Poll poll = pollService.createPoll(group, currentUser, pollDto);
+
+    PollContext pollContext = new PollContext(group, null);
+    Poll poll = pollService.createPoll(pollContext, currentUser, pollDto);
 
     // Convert to response DTO and return
     PollResponseDto responseDto = pollService.toResponseDto(poll);
@@ -96,7 +99,6 @@ public class PollController {
   /**
    * Casts a vote for a specific poll option.
    *
-   * @param groupId the ID of the group
    * @param pollId the ID of the poll
    * @param optionId the ID of the option being voted for
    * @return HTTP 204 No Content
@@ -107,7 +109,6 @@ public class PollController {
       description =
           """
       This endpoint casts a vote for some poll conducted within a specific group.
-      - 'groupId': the ID of the group
       - 'pollId': the ID of the poll
       - 'optionId': the ID of the option being voted for
       """)
@@ -118,14 +119,13 @@ public class PollController {
   public ResponseEntity<Void> vote(
       @PathVariable Long groupId, @PathVariable Long pollId, @PathVariable Long optionId) {
     User currentUser = authService.getCurrentUser();
-    pollService.vote(groupId, pollId, optionId, currentUser);
+    pollService.voteInGroup(groupId, pollId, optionId, currentUser);
     return ResponseEntity.status(HttpStatus.NO_CONTENT).build();
   }
 
   /**
    * Updates an existing poll.
    *
-   * @param groupId the ID of the group
    * @param pollId the ID of the poll to update
    * @param pollDto the new poll data
    * @return updated PollResponseDto
@@ -136,7 +136,6 @@ public class PollController {
       description =
           """
       This endpoint updates the state of a poll within a specific group.
-      - 'groupId': the ID of the group the poll belongs to
       - 'pollId': the ID of the poll to update
       """)
   @ApiResponse(responseCode = "200", description = "Poll data updated successfully.")
@@ -148,14 +147,13 @@ public class PollController {
       @PathVariable Long pollId,
       @RequestBody @Valid PollRequestDto pollDto) {
     User currentUser = authService.getCurrentUser();
-    Poll updatedPoll = pollService.updatePoll(groupId, pollId, currentUser, pollDto);
+    Poll updatedPoll = pollService.updatePollInGroup(groupId, pollId, currentUser, pollDto);
     return ResponseEntity.ok(pollService.toResponseDto(updatedPoll));
   }
 
   /**
    * Deletes a poll from a group.
    *
-   * @param groupId the ID of the group
    * @param pollId the ID of the poll to delete
    * @return HTTP 204 No Content
    */
@@ -165,7 +163,6 @@ public class PollController {
       description =
           """
       This endpoint deletes a poll conducted within a specific group.
-      - 'groupId': the ID of the group
       - 'pollId': the ID of the poll
       """)
   @ApiResponse(responseCode = "204", description = "Poll deleted successfully")
@@ -174,7 +171,7 @@ public class PollController {
       description = "Unauthorized request. You must provide an authentication token.")
   public ResponseEntity<Void> deletePoll(@PathVariable Long groupId, @PathVariable Long pollId) {
     User currentUser = authService.getCurrentUser();
-    pollService.deletePoll(groupId, pollId, currentUser);
+    pollService.deletePollInGroup(groupId, pollId, currentUser);
     return ResponseEntity.noContent().build();
   }
 }

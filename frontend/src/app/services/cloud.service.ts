@@ -5,6 +5,7 @@ import { FolderDto } from '../models/dtos/FolderDto';
 import { FolderContentItemDto } from '../models/dtos/FolderContentItemDto';
 import { PageResponseDto } from '../models/dtos/PageResponseDto';
 import { TrashEntryDto } from '../models/dtos/TrashEntryDto';
+import { SearchResultDto } from '../models/dtos/SearchResultDto';
 import { environment } from '../../environments/environment';
 
 @Injectable({
@@ -57,6 +58,20 @@ export class CloudService {
       `${this.apiUrl}/folders/content`,
       { params },
     );
+  }
+
+  searchInFolder(
+    folderPath: string,
+    query: string,
+    maxResults = 20,
+  ): Observable<SearchResultDto[]> {
+    const params = new HttpParams()
+      .set('folderPath', this.normalizePath(folderPath))
+      .set('query', query)
+      .set('maxResults', String(maxResults));
+    return this.http.get<SearchResultDto[]>(`${this.apiUrl}/folders/search`, {
+      params,
+    });
   }
 
   getFileContent(relativePath: string): Observable<string> {

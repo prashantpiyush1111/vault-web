@@ -42,6 +42,90 @@
       </div>
     </section>
 
+    <!-- Profile Picture Card -->
+    <section class="glass-card profile-picture-card">
+      <header class="section-header">
+        <div>
+          <p class="eyebrow">Profile</p>
+          <h2>Your photo</h2>
+        </div>
+      </header>
+      <div
+        style="display: flex; align-items: center; gap: 1rem; flex-wrap: wrap"
+      >
+        <div style="display: grid; gap: 0.6rem; justify-items: center">
+          <div
+            style="
+              width: 5.5rem;
+              aspect-ratio: 1;
+              border-radius: 50%;
+              overflow: hidden;
+            "
+          >
+            <img
+              *ngIf="profilePictureUrl; else dashboardInitial"
+              [src]="profilePictureUrl"
+              alt="Your profile picture"
+              style="width: 100%; height: 100%; object-fit: cover"
+            />
+            <ng-template #dashboardInitial>
+              <div
+                style="
+                  width: 100%;
+                  height: 100%;
+                  display: grid;
+                  place-items: center;
+                  background: var(--color-primary-strong);
+                  color: #fff;
+                  font-size: 2rem;
+                  font-weight: 700;
+                "
+              >
+                {{ data.profile.username.charAt(0).toUpperCase() }}
+              </div>
+            </ng-template>
+          </div>
+          <p class="profile-username">{{ data.profile.username }}</p>
+        </div>
+        <div style="display: grid; gap: 0.75rem; flex: 1">
+          <p class="profile-picture-hint">JPG, PNG, or WebP · Max 2 MB</p>
+          <input
+            #fileInput
+            type="file"
+            accept="image/jpeg,image/png,image/webp"
+            style="display: none"
+            (change)="onProfilePictureSelected($event)"
+          />
+          <button
+            class="primary-btn upload-btn"
+            type="button"
+            [disabled]="isUploadingPicture"
+            (click)="fileInput.click()"
+          >
+            <span *ngIf="!isUploadingPicture">
+              <i class="pi pi-upload" style="margin-right: 0.4rem"></i>
+              {{ profilePictureUrl ? "Change Photo" : "Upload Photo" }}
+            </span>
+            <span *ngIf="isUploadingPicture">Uploading…</span>
+          </button>
+          <button
+            *ngIf="profilePictureUrl"
+            class="primary-btn"
+            type="button"
+            [disabled]="isUploadingPicture"
+            (click)="removeProfilePicture()"
+          >
+            <i class="pi pi-trash" style="margin-right: 0.4rem"></i>
+            Remove Photo
+          </button>
+          <p class="form-success" *ngIf="pictureSuccess">
+            {{ pictureSuccess }}
+          </p>
+          <p class="form-error" *ngIf="pictureError">{{ pictureError }}</p>
+        </div>
+      </div>
+    </section>
+
     <div class="content-grid">
       <div class="primary-column space-y-6">
         <section class="glass-card">
@@ -59,8 +143,12 @@
 
           <div class="group-grid" *ngIf="data.groups.length">
             <article
-              class="group-card"
+              class="group-card cursor-pointer"
               *ngFor="let group of data.groups; trackBy: trackById"
+              role="button"
+              tabindex="0"
+              (click)="openGroupChat(group)"
+              (keydown)="onGroupChatKeydown($event, group)"
             >
               <div class="group-heading">
                 <h3>{{ group.name }}</h3>
@@ -183,9 +271,9 @@
                   let message of recentMessagesLimited;
                   trackBy: trackById
                 "
-                [class.timeline-entry-clickable]="!!message.privateChatId"
-                role="button"
-                tabindex="0"
+                [class.timeline-entry-clickable]="canOpenRecentMessage(message)"
+                [attr.role]="canOpenRecentMessage(message) ? 'button' : null"
+                [attr.tabindex]="canOpenRecentMessage(message) ? 0 : -1"
                 (click)="openRecentMessage(message)"
                 (keydown)="onRecentMessageKeydown($event, message)"
               >
@@ -350,3 +438,13 @@
     </div>
   </ng-container>
 </div>
+
+<app-private-chat-dialog
+  *ngIf="selectedGroup"
+  chatMode="group"
+  [username]="selectedGroup.name"
+  [currentUsername]="currentUsername"
+  [groupId]="selectedGroup.id"
+  [currentUserPicUrl]="profilePictureUrl"
+  (closeChat)="closeGroupChat()"
+/>

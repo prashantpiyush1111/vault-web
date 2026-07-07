@@ -6,13 +6,17 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
+import vaultWeb.dtos.ChatMessageDto;
 import vaultWeb.dtos.DeviceDto;
 import vaultWeb.dtos.GroupDto;
 import vaultWeb.exceptions.UnauthorizedException;
 import vaultWeb.exceptions.notfound.NotMemberException;
+import vaultWeb.models.ChatMessage;
 import vaultWeb.models.Group;
 import vaultWeb.models.User;
+import vaultWeb.repositories.ChatMessageRepository;
 import vaultWeb.repositories.DeviceRepository;
 import vaultWeb.repositories.GroupMemberRepository;
 import vaultWeb.security.annotations.AdminOnly;
@@ -35,6 +39,7 @@ public class GroupController {
   private final AuthService authService;
   private final GroupMemberRepository groupMemberRepository;
   private final DeviceRepository deviceRepository;
+  private final ChatMessageRepository chatMessageRepository;
 
   /**
    * Retrieves all public groups.
@@ -102,6 +107,54 @@ public class GroupController {
     List<DeviceDto> devices =
         deviceRepository.findByUserIn(members).stream().map(DeviceDto::from).toList();
     return ResponseEntity.ok(devices);
+  }
+
+  @GetMapping("/{id}/messages")
+  @Operation(
+      summary = "Get all messages of a group chat",
+      description =
+          """
+                    Retrieves all messages from a group chat.
+                    - The current user must be a group member.
+                    - Messages are ordered chronologically by timestamp.
+                    - Message content remains end-to-end encrypted and is never decrypted by the server.
+                    """)
+  public ResponseEntity<List<ChatMessageDto>> getGroupMessages(
+      @PathVariable Long id, Authentication authentication) {
+    User currentUser = getAuthenticatedGroupMember(id, authentication);
+    List<ChatMessage> messages = chatMessageRepository.findByGroupIdOrderByTimestampAsc(id);
+
+    List<ChatMessageDto> response =
+        messages.stream()
+            .map(
+                message -> {
+                  ChatMessageDto dto = new ChatMessageDto();
+                  dto.setE2eePayload(message.getE2eePayload());
+                  dto.setTimestamp(message.getTimestamp().toString());
+                  dto.setGroupId(id);
+                  dto.setPrivateChatId(null);
+                  dto.setSenderId(message.getSender().getId());
+                  dto.setSenderUsername(message.getSender().getUsername());
+                  dto.setSenderDeviceId(message.getSenderDeviceId());
+                  return dto;
+                })
+            .toList();
+
+    return ResponseEntity.ok(response);
+  }
+
+  private User getAuthenticatedGroupMember(Long groupId, Authentication authentication) {
+    if (authentication == null) {
+      throw new UnauthorizedException("User not authenticated");
+    }
+    User currentUser = authService.getCurrentUser();
+    if (currentUser == null) {
+      throw new UnauthorizedException("User not authenticated");
+    }
+    if (groupMemberRepository.findByGroupIdAndUserId(groupId, currentUser.getId()).isEmpty()) {
+      throw new NotMemberException(groupId, currentUser.getId());
+    }
+    return currentUser;
   }
 
   /**

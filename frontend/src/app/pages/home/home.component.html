@@ -79,11 +79,29 @@
             />
           </div>
           <!-- Avatar -->
-          <div
-            class="chat-avatar w-10 h-10 rounded-full text-white flex items-center justify-center font-semibold mr-4 select-none flex-shrink-0"
+          <ng-container
+            *ngIf="
+              getProfilePictureUrl(getOtherUser(chat)) as picUrl;
+              else noPic
+            "
           >
-            {{ getOtherUsername(chat).charAt(0).toUpperCase() }}
-          </div>
+            <div
+              class="chat-avatar w-10 h-10 rounded-full text-white flex items-center justify-center font-semibold mr-4 select-none flex-shrink-0 overflow-hidden"
+            >
+              <img
+                [src]="picUrl"
+                alt="Profile"
+                class="w-full h-full object-cover block"
+              />
+            </div>
+          </ng-container>
+          <ng-template #noPic>
+            <div
+              class="chat-avatar w-10 h-10 rounded-full text-white flex items-center justify-center font-semibold mr-4 select-none flex-shrink-0"
+            >
+              {{ getOtherUsername(chat).charAt(0).toUpperCase() }}
+            </div>
+          </ng-template>
 
           <!-- Chat Info -->
           <div class="flex-1">
@@ -125,8 +143,20 @@
         >
           <div
             class="chat-avatar w-10 h-10 rounded-full text-white flex items-center justify-center font-semibold mr-4 select-none"
+            [ngClass]="{ 'overflow-hidden': getProfilePictureUrl(user) }"
           >
-            {{ user.username.charAt(0).toUpperCase() }}
+            <ng-container
+              *ngIf="getProfilePictureUrl(user) as picUrl; else noPicAll"
+            >
+              <img
+                [src]="picUrl"
+                alt="Profile"
+                class="w-full h-full object-cover block"
+              />
+            </ng-container>
+            <ng-template #noPicAll>
+              {{ user.username.charAt(0).toUpperCase() }}
+            </ng-template>
           </div>
           <!-- <span class="text-gray-800 font-medium">{{ user.username }}</span> -->
           <span class="text-gray-800 font-medium">{{
@@ -268,5 +298,7 @@
   [username]="selectedUsername"
   [currentUsername]="currentUsername"
   [privateChatId]="privateChatId"
+  [otherUserPicUrl]="getProfilePictureUrl(getUserByUsername(selectedUsername))"
+  [currentUserPicUrl]="getProfilePictureUrl(getCurrentUser())"
   (closeChat)="closeChat()"
 />

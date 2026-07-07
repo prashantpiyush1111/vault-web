@@ -20,6 +20,7 @@ import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Component;
 import org.springframework.web.context.request.RequestContextHolder;
 import org.springframework.web.context.request.ServletRequestAttributes;
+import vaultWeb.dtos.DeviceDto;
 import vaultWeb.dtos.user.LoginRequest;
 import vaultWeb.dtos.user.UserDto;
 import vaultWeb.models.SecurityEvent;
@@ -56,18 +57,16 @@ public class SecurityAuditAspect {
   @AfterReturning(pointcut = "@annotation(auditSecurityEvent)", returning = "result")
   public void logSuccess(
       JoinPoint joinPoint, AuditSecurityEvent auditSecurityEvent, Object result) {
-    if (auditSecurityEvent.value() == SecurityEventType.NEW_DEVICE_DETECTED) {
-      if (result instanceof vaultWeb.dtos.DeviceDto deviceDto) {
-        if (deviceDto.getCreatedAt() != null
-            && deviceDto.getLastSeen() != null
-            && !deviceDto.getCreatedAt().equals(deviceDto.getLastSeen())) {
-          // Do not log NEW_DEVICE_DETECTED on updates
-          return;
-        }
+    String deviceId = null;
+    if (auditSecurityEvent.value() == SecurityEventType.NEW_DEVICE_DETECTED
+        && result instanceof DeviceDto deviceDto) {
+      if (!isNewDeviceRegistration(deviceDto)) {
+        return;
       }
+      deviceId = deviceDto.getDeviceId();
     }
     String status = deriveStatus(result);
-    logSecurityEvent(joinPoint, auditSecurityEvent.value(), status, null);
+    logSecurityEvent(joinPoint, auditSecurityEvent.value(), status, null, deviceId);
   }
 
   /**
@@ -79,7 +78,13 @@ public class SecurityAuditAspect {
    */
   @AfterThrowing(pointcut = "@annotation(auditSecurityEvent)", throwing = "ex")
   public void logFailure(JoinPoint joinPoint, AuditSecurityEvent auditSecurityEvent, Throwable ex) {
-    logSecurityEvent(joinPoint, auditSecurityEvent.value(), "FAILURE", ex);
+    logSecurityEvent(joinPoint, auditSecurityEvent.value(), "FAILURE", ex, null);
+  }
+
+  private boolean isNewDeviceRegistration(DeviceDto deviceDto) {
+    return deviceDto.getCreatedAt() != null
+        && deviceDto.getLastSeen() != null
+        && deviceDto.getCreatedAt().equals(deviceDto.getLastSeen());
   }
 
   private String deriveStatus(Object result) {
@@ -90,7 +95,11 @@ public class SecurityAuditAspect {
   }
 
   private void logSecurityEvent(
-      JoinPoint joinPoint, SecurityEventType eventType, String status, Throwable ex) {
+      JoinPoint joinPoint,
+      SecurityEventType eventType,
+      String status,
+      Throwable ex,
+      String deviceId) {
     HttpServletRequest request = getRequest();
     String ip = getClientIp(request);
     String username = extractUsername(joinPoint, request);
@@ -125,6 +134,7 @@ public class SecurityAuditAspect {
       event.setStatus(status);
       event.setTimestamp(timestamp);
       event.setIpAddress(ip);
+      event.setDeviceId(deviceId);
       event.setUserAgent(userAgent != null ? userAgent : "unknown");
       event.setLocation("Unknown");
       securityEventRepository.save(event);

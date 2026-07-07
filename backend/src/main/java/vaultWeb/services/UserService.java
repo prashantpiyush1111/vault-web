@@ -95,22 +95,29 @@ public class UserService {
     userRepository.save(user);
   }
 
-  /** Retrieves all security events for a specific user, ordered chronologically (newest first). */
+  /**
+   * Retrieves recent security events for a specific user, ordered chronologically (newest first).
+   */
   public List<SecurityEventDto> getSecurityEvents(User user) {
-    return securityEventRepository.findByUserOrderByTimestampDesc(user).stream()
+    return securityEventRepository.findTop50ByUserOrderByTimestampDesc(user).stream()
         .map(SecurityEventDto::new)
         .toList();
   }
 
   /** Manually logs a security event (e.g. for external/custom actions). */
   public void logSecurityEvent(
-      User user, SecurityEventType eventType, String status, HttpServletRequest request) {
+      User user,
+      SecurityEventType eventType,
+      String status,
+      HttpServletRequest request,
+      String deviceId) {
     SecurityEvent event = new SecurityEvent();
     event.setUser(user);
     event.setUsername(user != null ? user.getUsername() : "anonymous");
     event.setEventType(eventType);
     event.setStatus(status);
     event.setTimestamp(Instant.now());
+    event.setDeviceId(deviceId);
     if (request != null) {
       event.setIpAddress(request.getRemoteAddr());
       String ua = request.getHeader("User-Agent");
@@ -121,5 +128,17 @@ public class UserService {
     }
     event.setLocation("Unknown");
     securityEventRepository.save(event);
+  }
+
+  /** Saves a profile picture path to the user's record in the database. */
+  public void updateProfilePicture(User user, String picturePath) {
+    user.setProfilePicture(picturePath);
+    userRepository.save(user);
+  }
+
+  /** Clears the profile picture from the user's database record (sets it to null). */
+  public void removeProfilePicture(User user) {
+    user.setProfilePicture(null);
+    userRepository.save(user);
   }
 }

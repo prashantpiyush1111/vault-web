@@ -83,7 +83,9 @@ public class DashboardService {
             user.getUsername(),
             groupSummaries.size(),
             privateChatSummaries.size(),
-            messageCount);
+            messageCount,
+            // Include the profile picture path (null is fine — frontend handles the fallback)
+            user.getProfilePicture());
 
     return new UserDashboardDto(
         profileSummary, groupSummaries, privateChatSummaries, pollSummaries, recentMessages);

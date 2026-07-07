@@ -1,6 +1,7 @@
 package vaultWeb.controllers;
 
 import jakarta.validation.Valid;
+import java.security.Principal;
 import java.util.LinkedHashSet;
 import java.util.Set;
 import lombok.RequiredArgsConstructor;
@@ -8,9 +9,12 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.messaging.handler.annotation.MessageMapping;
 import org.springframework.messaging.handler.annotation.Payload;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Controller;
 import vaultWeb.dtos.ChatMessageDto;
+import vaultWeb.exceptions.UnauthorizedException;
 import vaultWeb.models.ChatMessage;
+import vaultWeb.repositories.GroupMemberRepository;
 import vaultWeb.services.ChatService;
 
 /**
@@ -26,6 +30,7 @@ public class ChatController {
 
   private final SimpMessagingTemplate messagingTemplate;
   private final ChatService chatService;
+  private final GroupMemberRepository groupMemberRepository;
 
   /**
    * Handles incoming group chat messages from clients and broadcasts them to all subscribers of the
@@ -34,18 +39,33 @@ public class ChatController {
    * @param messageDto DTO containing message content, sender information, and target group
    */
   @MessageMapping("/chat.send")
-  public void sendMessage(@Valid @Payload ChatMessageDto messageDto) {
+  public void sendMessage(@Valid @Payload ChatMessageDto messageDto, Principal principal) {
+    authorizeGroupMessage(messageDto, principal);
     ChatMessage savedMessage = chatService.saveMessage(messageDto);
 
-    ChatMessageDto responseDto = new ChatMessageDto();
-    responseDto.setE2eePayload(savedMessage.getE2eePayload());
-    responseDto.setTimestamp(savedMessage.getTimestamp().toString());
-    responseDto.setSenderUsername(savedMessage.getSender().getUsername());
-    responseDto.setGroupId(savedMessage.getGroup().getId());
-    responseDto.setSenderDeviceId(savedMessage.getSenderDeviceId());
+    ChatMessageDto responseDto = chatService.toDto(savedMessage);
 
     messagingTemplate.convertAndSend(
         "/topic/group/" + savedMessage.getGroup().getId(), responseDto);
+  }
+
+  private void authorizeGroupMessage(ChatMessageDto messageDto, Principal principal) {
+    if (principal == null || principal.getName() == null || principal.getName().isBlank()) {
+      throw new UnauthorizedException("User not authenticated");
+    }
+    if (messageDto.getGroupId() == null) {
+      throw new IllegalArgumentException("Group ID is required for group messages");
+    }
+
+    String username = principal.getName();
+    boolean isMember =
+        groupMemberRepository.existsByGroupIdAndUserUsername(messageDto.getGroupId(), username);
+    if (!isMember) {
+      throw new AccessDeniedException("Not allowed to send messages to this group");
+    }
+
+    messageDto.setSenderId(null);
+    messageDto.setSenderUsername(username);
   }
 
   /**
@@ -58,12 +78,7 @@ public class ChatController {
   public void sendPrivateMessage(@Valid @Payload ChatMessageDto messageDto) {
     ChatMessage savedMessage = chatService.saveMessage(messageDto);
 
-    ChatMessageDto responseDto = new ChatMessageDto();
-    responseDto.setE2eePayload(savedMessage.getE2eePayload());
-    responseDto.setTimestamp(savedMessage.getTimestamp().toString());
-    responseDto.setSenderUsername(savedMessage.getSender().getUsername());
-    responseDto.setPrivateChatId(savedMessage.getPrivateChat().getId());
-    responseDto.setSenderDeviceId(savedMessage.getSenderDeviceId());
+    ChatMessageDto responseDto = chatService.toDto(savedMessage);
 
     String user1 = savedMessage.getPrivateChat().getUser1().getUsername();
     String user2 = savedMessage.getPrivateChat().getUser2().getUsername();

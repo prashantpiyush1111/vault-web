@@ -1,9 +1,9 @@
-<div class="chat-shell fixed top-0 left-0 w-screen h-screen flex flex-col z-50">
+<div class="chat-shell fixed top-0 left-0 w-screen h-dvh flex flex-col z-50">
   <!-- Header -->
   <div
     class="chat-header px-4 py-3 border-b font-semibold flex justify-between items-center"
   >
-    <span class="text-lg sm:text-xl">Chat with {{ username }}</span>
+    <span class="text-lg sm:text-xl">{{ chatTitle }}</span>
     <div class="flex items-center gap-2 flex-shrink-0">
       <button
         (click)="toggleSearch()"
@@ -70,12 +70,31 @@
   >
     <div
       *ngFor="let msg of messages; let i = index"
-      class="flex"
+      class="flex items-end mb-3"
       [ngClass]="{
         'justify-end': msg.senderUsername === currentUsername,
         'justify-start': msg.senderUsername !== currentUsername,
       }"
     >
+      <div
+        *ngIf="msg.senderUsername !== currentUsername"
+        class="chat-avatar w-8 h-8 rounded-full text-white flex items-center justify-center font-semibold text-xs select-none flex-shrink-0 mr-2"
+        [ngClass]="{ 'overflow-hidden': getAvatarPicUrl(msg.senderUsername) }"
+      >
+        <ng-container
+          *ngIf="getAvatarPicUrl(msg.senderUsername) as picUrl; else noPicOther"
+        >
+          <img
+            [src]="picUrl"
+            alt="Profile"
+            class="w-full h-full object-cover block"
+          />
+        </ng-container>
+        <ng-template #noPicOther>
+          {{ getAvatarFallback(msg.senderUsername) }}
+        </ng-template>
+      </div>
+
       <div
         #messageBubble
         class="chat-bubble max-w-[75%] px-4 py-2 rounded-xl text-sm break-words"
@@ -87,10 +106,41 @@
           'search-active-match': isActiveSearchMatch(i),
         }"
       >
-        <div>{{ msg.content }}</div>
+        <ng-container [ngSwitch]="msg.kind">
+          <img
+            *ngSwitchCase="'sticker'"
+            class="chat-sticker"
+            [src]="msg.stickerSrc"
+            [alt]="msg.stickerLabel || msg.content"
+            loading="lazy"
+          />
+          <div *ngSwitchDefault>{{ msg.content }}</div>
+        </ng-container>
         <div class="message-time">
           {{ msg.timestamp | date: "shortTime" }}
         </div>
+      </div>
+
+      <div
+        *ngIf="msg.senderUsername === currentUsername"
+        class="chat-avatar w-8 h-8 rounded-full text-white flex items-center justify-center font-semibold text-xs select-none flex-shrink-0 ml-2"
+        [ngClass]="{ 'overflow-hidden': getAvatarPicUrl(msg.senderUsername) }"
+      >
+        <ng-container
+          *ngIf="
+            getAvatarPicUrl(msg.senderUsername) as picUrl;
+            else noPicCurrent
+          "
+        >
+          <img
+            [src]="picUrl"
+            alt="Profile"
+            class="w-full h-full object-cover block"
+          />
+        </ng-container>
+        <ng-template #noPicCurrent>
+          {{ getAvatarFallback(msg.senderUsername) }}
+        </ng-template>
       </div>
     </div>
 
@@ -102,17 +152,84 @@
     >
       No messages found for '{{ searchQuery }}'
     </div>
+
+    <div *ngIf="typingIndicatorLabel" class="typing-indicator text-sm">
+      {{ typingIndicatorLabel }}
+    </div>
   </div>
 
   <!-- Input-Field -->
-  <form (submit)="sendMessage()" class="chat-input-row flex border-t px-4 py-3">
+  <form
+    (submit)="sendMessage()"
+    class="chat-input-row relative flex border-t px-4 py-3"
+  >
+    <div
+      *ngIf="isEmojiPickerOpen || isStickerPickerOpen"
+      class="reaction-popover"
+    >
+      <div
+        *ngIf="isEmojiPickerOpen"
+        class="emoji-grid"
+        aria-label="Emoji picker"
+      >
+        <button
+          *ngFor="let emoji of emojis"
+          type="button"
+          class="emoji-option"
+          (click)="insertEmoji(emoji)"
+          [attr.aria-label]="'Insert ' + emoji"
+        >
+          {{ emoji }}
+        </button>
+      </div>
+
+      <div
+        *ngIf="isStickerPickerOpen"
+        class="sticker-grid"
+        aria-label="Sticker picker"
+      >
+        <button
+          *ngFor="let sticker of stickers"
+          type="button"
+          class="sticker-option"
+          (click)="sendSticker(sticker)"
+          [attr.aria-label]="'Send ' + sticker.label + ' sticker'"
+        >
+          <img [src]="sticker.src" [alt]="sticker.label" loading="lazy" />
+        </button>
+      </div>
+    </div>
+
+    <button
+      type="button"
+      class="composer-tool-btn"
+      [class.is-active]="isEmojiPickerOpen"
+      (click)="toggleEmojiPicker()"
+      aria-label="Open emoji picker"
+      title="Emoji"
+    >
+      <i class="pi pi-face-smile"></i>
+    </button>
+    <button
+      type="button"
+      class="composer-tool-btn"
+      [class.is-active]="isStickerPickerOpen"
+      (click)="toggleStickerPicker()"
+      aria-label="Open sticker picker"
+      title="Stickers"
+    >
+      <i class="pi pi-image"></i>
+    </button>
     <input
+      #messageInput
       type="text"
       [(ngModel)]="newMessage"
+      (ngModelChange)="onComposerInput($event)"
       name="message"
-      class="chat-input flex-1 px-3 py-2 outline-none border rounded-l-md"
+      class="chat-input flex-1 px-3 py-2 outline-none border"
       placeholder="Type a message..."
       autocomplete="off"
+      (focus)="closeReactionPickers()"
     />
     <button
       type="submit"

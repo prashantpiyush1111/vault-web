@@ -32,6 +32,8 @@ public class SecurityEvent {
 
   private String ipAddress;
 
+  private String deviceId;
+
   @Column(columnDefinition = "TEXT")
   private String userAgent;
 

@@ -22,8 +22,12 @@ public class Poll {
   private Long id;
 
   @ManyToOne
-  @JoinColumn(name = "group_id", nullable = false)
+  @JoinColumn(name = "group_id")
   private Group group;
+
+  @ManyToOne
+  @JoinColumn(name = "private_chat_id", nullable = true)
+  private PrivateChat privateChat;
 
   private String question;
 

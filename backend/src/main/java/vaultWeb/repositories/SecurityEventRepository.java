@@ -8,5 +8,5 @@ import vaultWeb.models.User;
 
 @Repository
 public interface SecurityEventRepository extends JpaRepository<SecurityEvent, Long> {
-  List<SecurityEvent> findByUserOrderByTimestampDesc(User user);
+  List<SecurityEvent> findTop50ByUserOrderByTimestampDesc(User user);
 }

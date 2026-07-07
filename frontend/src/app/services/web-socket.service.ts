@@ -2,6 +2,7 @@ import { Injectable } from '@angular/core';
 import { Client } from '@stomp/stompjs';
 import SockJS from 'sockjs-client';
 import { ChatMessageDto } from '../models/dtos/ChatMessageDto';
+import { TypingIndicatorDto } from '../models/dtos/TypingIndicatorDto';
 import { environment } from '../../environments/environment';
 import { AuthService } from './auth.service';
 import { Observable, Observer } from 'rxjs';
@@ -151,6 +152,19 @@ export class WebSocketService {
     }
   }
 
+  sendTypingIndicator(event: TypingIndicatorDto): boolean {
+    if (this.connected) {
+      this.client?.publish({
+        destination: '/app/chat.typing',
+        body: JSON.stringify(event),
+      });
+      return true;
+    } else {
+      console.warn('WebSocket not connected yet. Typing indicator not sent.');
+      return false;
+    }
+  }
+
   subscribeToPrivateMessages(): Observable<ChatMessageDto> {
     return new Observable((observer) => {
       const subscribeAction = () => {
@@ -193,6 +207,54 @@ export class WebSocketService {
       (message) => {
         const msg = JSON.parse(message.body) as ChatMessageDto;
         observer.next(msg);
+      },
+    );
+
+    return () => subscription?.unsubscribe();
+  }
+
+  subscribeToTypingIndicators(): Observable<TypingIndicatorDto> {
+    return new Observable((observer) => {
+      const subscribeAction = () => {
+        return this.subscribeToTypingInternal(observer);
+      };
+
+      let unsubscribeFn: (() => void) | undefined;
+      let isUnsubscribed = false;
+      let queuedSubscribe: (() => void) | undefined;
+
+      if (!this.connected) {
+        queuedSubscribe = () => {
+          if (isUnsubscribed) {
+            return;
+          }
+          unsubscribeFn = subscribeAction();
+        };
+        this.connectCallbacks.push(queuedSubscribe);
+      } else {
+        unsubscribeFn = subscribeAction();
+      }
+
+      return () => {
+        isUnsubscribed = true;
+        if (!unsubscribeFn && queuedSubscribe) {
+          this.connectCallbacks = this.connectCallbacks.filter(
+            (cb) => cb !== queuedSubscribe,
+          );
+        }
+        if (unsubscribeFn) {
+          unsubscribeFn();
+        }
+      };
+    });
+  }
+
+  private subscribeToTypingInternal(observer: Observer<TypingIndicatorDto>) {
+    const subscription = this.client?.subscribe(
+      '/user/queue/typing',
+      (message) => {
+        const event = JSON.parse(message.body) as TypingIndicatorDto;
+        observer.next(event);
       },
     );
 

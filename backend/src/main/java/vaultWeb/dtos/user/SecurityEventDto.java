@@ -16,6 +16,7 @@ public class SecurityEventDto {
   private String status;
   private Instant timestamp;
   private String ipAddress;
+  private String deviceId;
   private String userAgent;
   private String location;
 
@@ -25,6 +26,7 @@ public class SecurityEventDto {
     this.status = event.getStatus();
     this.timestamp = event.getTimestamp();
     this.ipAddress = event.getIpAddress();
+    this.deviceId = event.getDeviceId();
     this.userAgent = event.getUserAgent();
     this.location = event.getLocation();
   }

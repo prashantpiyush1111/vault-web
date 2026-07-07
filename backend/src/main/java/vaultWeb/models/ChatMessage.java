@@ -3,6 +3,7 @@ package vaultWeb.models;
 import jakarta.persistence.*;
 import java.time.Instant;
 import lombok.*;
+import vaultWeb.models.enums.MessageType;
 
 @Entity
 @Getter
@@ -35,4 +36,11 @@ public class ChatMessage {
   private PrivateChat privateChat;
 
   private Instant timestamp;
+
+  @Enumerated(EnumType.STRING)
+  private MessageType messageType;
+
+  @OneToOne(fetch = FetchType.LAZY)
+  @JoinColumn(name = "poll_id")
+  private Poll poll;
 }

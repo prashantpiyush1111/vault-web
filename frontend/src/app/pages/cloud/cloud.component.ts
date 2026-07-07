@@ -15,6 +15,7 @@ import { ToolbarModule } from 'primeng/toolbar';
 import { FileDto } from '../../models/dtos/FileDto';
 import { FolderDto } from '../../models/dtos/FolderDto';
 import { FolderContentItemDto } from '../../models/dtos/FolderContentItemDto';
+import { SearchResultDto } from '../../models/dtos/SearchResultDto';
 import { CloudService } from '../../services/cloud.service';
 import { finalize, firstValueFrom } from 'rxjs';
 import { UiToastService } from '../../core/services/ui-toast.service';
@@ -30,6 +31,7 @@ interface CloudEntry {
   path: string;
   sizeLabel: string;
   typeLabel: string;
+  lastModifiedAt: number;
 }
 
 type CloudSort =
@@ -89,6 +91,10 @@ export class CloudComponent implements OnInit {
   entries: CloudEntry[] = [];
   downloadingPaths = new Set<string>();
 
+  searchQuery = '';
+  searchActive = false;
+  searching = false;
+
   pageSize = 50;
   totalElements = 0;
   contentFirst = 0;
@@ -98,6 +104,7 @@ export class CloudComponent implements OnInit {
   private draggedPath: string | null = null;
   private draggedIsFolder = false;
   draggedOverPath: string | null = null;
+  isExternalDrag = false;
 
   constructor(
     private cloudService: CloudService,
@@ -198,6 +205,19 @@ export class CloudComponent implements OnInit {
       path: item.path,
       sizeLabel: this.formatFileSize(item.size),
       typeLabel: item.directory ? 'Folder' : item.mimeType || 'Unknown',
+      lastModifiedAt: item.lastModifiedAt,
+    }));
+  }
+
+  private buildSearchEntries(results: SearchResultDto[]): CloudEntry[] {
+    return results.map((result) => ({
+      kind: result.type === 'folder' ? 'folder' : 'file',
+      name: result.name,
+      path: result.path,
+      sizeLabel: this.formatFileSize(result.size ?? 0),
+      typeLabel:
+        result.type === 'folder' ? 'Folder' : result.mimeType || 'Unknown',
+      lastModifiedAt: result.lastModifiedAt,
     }));
   }
 
@@ -246,6 +266,53 @@ export class CloudComponent implements OnInit {
   setSort(sort: CloudSort) {
     if (this.sort === sort) return;
     this.sort = sort;
+    this.searchActive = false;
+    this.searchQuery = '';
+    this.searching = false;
+    this.contentFirst = 0;
+    this.loading = true;
+    const relativePath = this.getRelativePath(
+      this.currentFolder?.path || this.rootPath,
+    );
+    this.loadFolderContent(relativePath, 0);
+  }
+
+  onSearch() {
+    const query = this.searchQuery.trim();
+    if (!query) {
+      this.clearSearch();
+      return;
+    }
+    const relativePath = this.getRelativePath(
+      this.currentFolder?.path || this.rootPath,
+    );
+    const wasSearchActive = this.searchActive;
+    this.searching = true;
+    this.searchActive = true;
+    const requestId = ++this.contentRequestId;
+    this.cloudService.searchInFolder(relativePath, query, 100).subscribe({
+      next: (results) => {
+        if (requestId !== this.contentRequestId) return;
+        this.entries = this.buildSearchEntries(results);
+        this.totalElements = this.entries.length;
+        this.searching = false;
+      },
+      error: (err) => {
+        if (requestId !== this.contentRequestId) return;
+        this.searching = false;
+        // Restore the prior mode so a failed search doesn't strand the UI in
+        // "search mode" (no pagination, wrong subtitle) over folder contents.
+        this.searchActive = wasSearchActive;
+        this.toast.error('Search failed', this.getErrorMessage(err));
+      },
+    });
+  }
+
+  clearSearch() {
+    if (!this.searchActive && this.searchQuery === '') return;
+    this.searchQuery = '';
+    this.searchActive = false;
+    this.searching = false;
     this.contentFirst = 0;
     this.loading = true;
     const relativePath = this.getRelativePath(
@@ -255,9 +322,15 @@ export class CloudComponent implements OnInit {
   }
 
   loadRootFolder() {
+    this.searchActive = false;
+    this.searchQuery = '';
+    this.searching = false;
     this.loading = true;
     this.error = undefined;
     this.contentFirst = 0;
+    // Invalidate any in-flight search/content request so a stale, fast
+    // response can't overwrite the root reload that's about to start.
+    this.contentRequestId++;
     this.cloudService.getRootFolder(false).subscribe({
       next: (folder) => {
         this.currentFolder = folder;
@@ -285,8 +358,14 @@ export class CloudComponent implements OnInit {
   }
 
   navigateToFolder(folderPath?: string) {
+    this.searchActive = false;
+    this.searchQuery = '';
+    this.searching = false;
     this.loading = true;
     this.contentFirst = 0;
+    // Invalidate any in-flight search/content request so a stale response
+    // can't overwrite the entries while navigation is in progress.
+    this.contentRequestId++;
     const relativePath = this.getRelativePath(folderPath || this.rootPath);
     this.cloudService.getFolderByPath(relativePath, false).subscribe({
       next: (folder) => {
@@ -492,12 +571,61 @@ export class CloudComponent implements OnInit {
 
   onFileSelected(event: Event) {
     const input = event.target as HTMLInputElement;
-    const file = input?.files?.[0];
-    if (!file) return;
+    const files = input?.files;
+
+    if (!files || files.length === 0) return;
 
     const currentPath = this.getRelativePath(this.currentFolder?.path || '/');
-    this.uploadFile(currentPath, file);
+
+    for (const file of Array.from(files)) {
+      this.uploadFile(currentPath, file);
+    }
+
     input.value = '';
+  }
+  onExternalDragOver(event: DragEvent) {
+    if (this.draggedPath) return;
+
+    const isFileDrag =
+      !!event.dataTransfer &&
+      Array.from(event.dataTransfer.types).includes('Files');
+
+    if (!isFileDrag) {
+      return;
+    }
+
+    event.preventDefault();
+    this.isExternalDrag = true;
+    event.dataTransfer!.dropEffect = 'copy';
+  }
+  onExternalDragLeave(event: DragEvent) {
+    const currentTarget = event.currentTarget as HTMLElement;
+    const relatedTarget = event.relatedTarget as Node | null;
+
+    if (!relatedTarget || !currentTarget.contains(relatedTarget)) {
+      this.isExternalDrag = false;
+    }
+  }
+
+  onExternalDrop(event: DragEvent) {
+    event.preventDefault();
+    this.isExternalDrag = false;
+
+    if (this.draggedPath) {
+      return;
+    }
+
+    const files = event.dataTransfer?.files;
+
+    if (!files || files.length === 0) {
+      return;
+    }
+
+    const currentPath = this.getRelativePath(this.currentFolder?.path || '/');
+
+    for (const file of Array.from(files)) {
+      this.uploadFile(currentPath, file);
+    }
   }
 
   confirmDeleteFolder(folderPath: string) {
@@ -733,9 +861,6 @@ export class CloudComponent implements OnInit {
       event.preventDefault();
       if (event.dataTransfer) event.dataTransfer.dropEffect = 'move';
       this.draggedOverPath = path;
-    } else {
-      event.preventDefault();
-      if (event.dataTransfer) event.dataTransfer.dropEffect = 'none';
     }
   }
 
@@ -817,9 +942,6 @@ export class CloudComponent implements OnInit {
       event.preventDefault();
       if (event.dataTransfer) event.dataTransfer.dropEffect = 'move';
       this.draggedOverPath = path;
-    } else {
-      event.preventDefault();
-      if (event.dataTransfer) event.dataTransfer.dropEffect = 'none';
     }
   }
 

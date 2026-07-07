@@ -104,7 +104,8 @@ public class SecurityConfig {
                         "/swagger-resources/**",
                         "/webjars/**",
                         "/docs/**",
-                        "/ws-chat/**")
+                        "/ws-chat/**",
+                        "/uploads/profile-pictures/**")
                     .permitAll()
                     .anyRequest()
                     .authenticated())

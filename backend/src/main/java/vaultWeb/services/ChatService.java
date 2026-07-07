@@ -11,6 +11,7 @@ import vaultWeb.models.ChatMessage;
 import vaultWeb.models.Group;
 import vaultWeb.models.PrivateChat;
 import vaultWeb.models.User;
+import vaultWeb.models.enums.MessageType;
 import vaultWeb.repositories.ChatMessageRepository;
 import vaultWeb.repositories.GroupRepository;
 import vaultWeb.repositories.PrivateChatRepository;
@@ -40,6 +41,7 @@ public class ChatService {
   private final UserRepository userRepository;
   private final GroupRepository groupRepository;
   private final PrivateChatRepository privateChatRepository;
+  private final PollService pollService;
 
   /**
    * Saves a chat message to a group or private chat.
@@ -72,9 +74,13 @@ public class ChatService {
     } else {
       throw new UserNotFoundException("Sender information missing");
     }
+    MessageType messageType =
+        dto.getMessageType() != null ? dto.getMessageType() : MessageType.TEXT;
+    dto.setMessageType(messageType);
 
     ChatMessage message = new ChatMessage();
     message.setSender(sender);
+    message.setMessageType(messageType);
 
     if (dto.getTimestamp() != null) {
       message.setTimestamp(Instant.parse(dto.getTimestamp()));
@@ -82,12 +88,14 @@ public class ChatService {
       message.setTimestamp(Instant.now());
     }
 
-    if (dto.getE2eePayload() == null
-        || dto.getE2eePayload().isBlank()
-        || dto.getSenderDeviceId() == null
-        || dto.getSenderDeviceId().isBlank()) {
-      throw new IllegalArgumentException(
-          "Missing end-to-end encrypted payload or sender device ID");
+    if (messageType == MessageType.TEXT) {
+      if (dto.getE2eePayload() == null
+          || dto.getE2eePayload().isBlank()
+          || dto.getSenderDeviceId() == null
+          || dto.getSenderDeviceId().isBlank()) {
+        throw new IllegalArgumentException(
+            "Missing end-to-end encrypted payload or sender device ID");
+      }
     }
 
     if (dto.getGroupId() != null) {
@@ -106,6 +114,7 @@ public class ChatService {
           privateChatRepository
               .findById(dto.getPrivateChatId())
               .orElseThrow(() -> new PrivateChatNotFoundException("Private chat not found"));
+
       message.setE2eePayload(dto.getE2eePayload());
       message.setSenderDeviceId(dto.getSenderDeviceId());
       message.setPrivateChat(privateChat);
@@ -114,5 +123,44 @@ public class ChatService {
     }
 
     return chatMessageRepository.save(message);
+  }
+
+  public ChatMessageDto toDto(ChatMessage message) {
+
+    ChatMessageDto dto = new ChatMessageDto();
+
+    dto.setTimestamp(message.getTimestamp().toString());
+
+    dto.setSenderId(message.getSender().getId());
+
+    dto.setSenderUsername(message.getSender().getUsername());
+
+    dto.setSenderDeviceId(message.getSenderDeviceId());
+
+    MessageType messageType =
+        message.getMessageType() != null ? message.getMessageType() : MessageType.TEXT;
+    dto.setMessageType(messageType);
+
+    if (message.getGroup() != null) {
+
+      dto.setGroupId(message.getGroup().getId());
+    }
+
+    if (message.getPrivateChat() != null) {
+
+      dto.setPrivateChatId(message.getPrivateChat().getId());
+    }
+
+    if (messageType == MessageType.TEXT) {
+
+      dto.setE2eePayload(message.getE2eePayload());
+
+    } else if (messageType == MessageType.POLL) {
+      if (message.getPoll() != null) {
+        dto.setPoll(pollService.toResponseDto(message.getPoll()));
+      }
+    }
+
+    return dto;
   }
 }

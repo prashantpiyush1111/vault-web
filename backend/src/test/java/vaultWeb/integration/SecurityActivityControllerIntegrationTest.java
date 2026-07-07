@@ -66,6 +66,7 @@ class SecurityActivityControllerIntegrationTest extends IntegrationTestBase {
     event2.setStatus("SUCCESS");
     event2.setTimestamp(java.time.Instant.now());
     event2.setIpAddress("127.0.0.1");
+    event2.setDeviceId("device-2");
     event2.setUserAgent("TestAgent");
     event2.setLocation("Localhost");
     securityEventRepository.save(event2);
@@ -75,6 +76,7 @@ class SecurityActivityControllerIntegrationTest extends IntegrationTestBase {
         .andExpect(status().isOk())
         .andExpect(jsonPath("$", hasSize(2)))
         .andExpect(jsonPath("$[0].eventType").value("PASSWORD_CHANGE"))
+        .andExpect(jsonPath("$[0].deviceId").value("device-2"))
         .andExpect(jsonPath("$[1].eventType").value("LOGIN"));
   }
 

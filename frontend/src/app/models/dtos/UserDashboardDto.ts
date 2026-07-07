@@ -12,6 +12,8 @@ export interface ProfileSummary {
   groupCount: number;
   privateChatCount: number;
   messagesSent: number;
+  // Relative path to the user's profile picture — null if not set
+  profilePicture?: string | null;
 }
 
 export interface GroupSummary {
