@@ -2,6 +2,10 @@ import { Injectable } from '@angular/core';
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { FolderDto } from '../models/dtos/FolderDto';
+import { FolderContentItemDto } from '../models/dtos/FolderContentItemDto';
+import { PageResponseDto } from '../models/dtos/PageResponseDto';
+import { TrashEntryDto } from '../models/dtos/TrashEntryDto';
+import { SearchResultDto } from '../models/dtos/SearchResultDto';
 import { environment } from '../../environments/environment';
 
 @Injectable({
@@ -34,6 +38,40 @@ export class CloudService {
       .set('path', path)
       .set('includeChildCounts', String(includeChildCounts));
     return this.http.get<FolderDto>(`${this.apiUrl}/folders/path`, { params });
+  }
+
+  getFolderContent(
+    relativePath?: string,
+    page = 0,
+    size = 50,
+    sort?: string,
+  ): Observable<PageResponseDto<FolderContentItemDto>> {
+    const path = this.normalizePath(relativePath);
+    let params = new HttpParams()
+      .set('path', path)
+      .set('page', String(page))
+      .set('size', String(size));
+    if (sort) {
+      params = params.set('sort', sort);
+    }
+    return this.http.get<PageResponseDto<FolderContentItemDto>>(
+      `${this.apiUrl}/folders/content`,
+      { params },
+    );
+  }
+
+  searchInFolder(
+    folderPath: string,
+    query: string,
+    maxResults = 20,
+  ): Observable<SearchResultDto[]> {
+    const params = new HttpParams()
+      .set('folderPath', this.normalizePath(folderPath))
+      .set('query', query)
+      .set('maxResults', String(maxResults));
+    return this.http.get<SearchResultDto[]>(`${this.apiUrl}/folders/search`, {
+      params,
+    });
   }
 
   getFileContent(relativePath: string): Observable<string> {
@@ -112,5 +150,22 @@ export class CloudService {
       params: { path },
       responseType: 'blob',
     });
+  }
+
+  listTrash(): Observable<TrashEntryDto[]> {
+    return this.http.get<TrashEntryDto[]>(`${this.apiUrl}/files/trash`);
+  }
+
+  restoreTrashEntry(id: string): Observable<void> {
+    return this.http.post<void>(
+      `${this.apiUrl}/files/trash/${encodeURIComponent(id)}/restore`,
+      null,
+    );
+  }
+
+  purgeTrashEntry(id: string): Observable<void> {
+    return this.http.delete<void>(
+      `${this.apiUrl}/files/trash/${encodeURIComponent(id)}`,
+    );
   }
 }

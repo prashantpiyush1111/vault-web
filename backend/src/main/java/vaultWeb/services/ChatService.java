@@ -88,7 +88,7 @@ public class ChatService {
       message.setTimestamp(Instant.now());
     }
 
-    if (dto.getMessageType() == MessageType.TEXT) {
+    if (messageType == MessageType.TEXT) {
       if (dto.getE2eePayload() == null
           || dto.getE2eePayload().isBlank()
           || dto.getSenderDeviceId() == null

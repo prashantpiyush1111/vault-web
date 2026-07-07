@@ -1,6 +1,11 @@
 import { CommonModule } from '@angular/common';
 import { Component } from '@angular/core';
-import { NavigationEnd, Router, RouterOutlet } from '@angular/router';
+import {
+  ActivatedRoute,
+  NavigationEnd,
+  Router,
+  RouterOutlet,
+} from '@angular/router';
 import { filter } from 'rxjs/internal/operators/filter';
 import { NavbarComponent } from './navbar/navbar.component';
 import { ThemeService } from './services/theme.service';
@@ -17,16 +22,20 @@ export class AppComponent {
 
   constructor(
     private router: Router,
+    private activatedRoute: ActivatedRoute,
     public themeService: ThemeService,
   ) {
-    this.showNavbar = !['/login', '/register'].includes(this.router.url);
     this.router.events
       .pipe(filter((event) => event instanceof NavigationEnd))
-      .subscribe((event: NavigationEnd) => {
-        // show navbar if not in Login/Register
-        this.showNavbar = !['/login', '/register'].includes(
-          event.urlAfterRedirects,
-        );
+      .subscribe(() => {
+        // Derive navbar visibility from the active route's data, not the raw URL.
+        // This correctly handles the wildcard (**) route where the URL is the
+        // unknown path (e.g. /blah) rather than /not-found.
+        let route = this.activatedRoute;
+        while (route.firstChild) {
+          route = route.firstChild;
+        }
+        this.showNavbar = !route.snapshot.data['hideNavbar'];
       });
   }
 

@@ -5,11 +5,13 @@ import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.Valid;
+import java.io.IOException;
 import java.util.List;
 import java.util.Map;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 import vaultWeb.dtos.user.ChangePasswordRequest;
 import vaultWeb.dtos.user.LoginRequest;
 import vaultWeb.dtos.user.UserDto;
@@ -19,6 +21,7 @@ import vaultWeb.models.User;
 import vaultWeb.security.annotations.ApiRateLimit;
 import vaultWeb.security.annotations.AuditSecurityEvent;
 import vaultWeb.security.annotations.SecurityEventType;
+import vaultWeb.services.ProfilePictureService;
 import vaultWeb.services.UserService;
 import vaultWeb.services.auth.AuthService;
 import vaultWeb.services.auth.LoginResult;
@@ -33,6 +36,8 @@ public class UserController {
   private final UserService userService;
   private final AuthService authService;
   private final RefreshTokenService refreshTokenService;
+  // Injected automatically by Spring — handles file validation and disk storage
+  private final ProfilePictureService profilePictureService;
 
   @PostMapping("/register")
   @Operation(
@@ -192,6 +197,76 @@ public class UserController {
       throw new UnauthorizedException("User not authenticated");
     }
     userService.changePassword(currentUser, request.getCurrentPassword(), request.getNewPassword());
+    return ResponseEntity.noContent().build();
+  }
+
+  // ─────────────────────────────────────────────────────────────────────────
+  // Profile Picture Endpoints
+  // ─────────────────────────────────────────────────────────────────────────
+
+  /** Upload (or replace) the current user's profile picture. */
+  @PostMapping(value = "/profile-picture", consumes = "multipart/form-data")
+  @Operation(
+      summary = "Upload or replace the current user's profile picture",
+      description = "Accepts JPEG, PNG, or WebP. Maximum size is 2 MB.")
+  @ApiResponse(responseCode = "200", description = "Profile picture uploaded successfully.")
+  @ApiResponse(responseCode = "400", description = "Invalid file type or file too large.")
+  @ApiResponse(responseCode = "401", description = "Unauthorized — must be logged in.")
+  public ResponseEntity<Map<String, String>> uploadProfilePicture(
+      @RequestParam("file") MultipartFile file) throws IOException {
+    User currentUser = authService.getCurrentUser();
+    if (currentUser == null) {
+      throw new UnauthorizedException("User not authenticated");
+    }
+
+    String oldPicturePath = currentUser.getProfilePicture();
+
+    String newPicturePath = profilePictureService.store(file, currentUser.getId());
+    try {
+      userService.updateProfilePicture(currentUser, newPicturePath);
+    } catch (RuntimeException ex) {
+      profilePictureService.delete(newPicturePath);
+      throw ex;
+    }
+
+    if (oldPicturePath != null && !oldPicturePath.isBlank()) {
+      profilePictureService.delete(oldPicturePath);
+    }
+
+    return ResponseEntity.ok(Map.of("profilePicture", newPicturePath));
+  }
+
+  /** Get the current user's profile picture path. */
+  @GetMapping("/profile-picture")
+  @Operation(
+      summary = "Get the current user's profile picture path",
+      description = "Returns the relative path to the profile picture, or null if none is set.")
+  @ApiResponse(responseCode = "200", description = "Profile picture path retrieved.")
+  @ApiResponse(responseCode = "401", description = "Unauthorized — must be logged in.")
+  public ResponseEntity<Map<String, String>> getProfilePicture() {
+    User currentUser = authService.getCurrentUser();
+    if (currentUser == null) {
+      throw new UnauthorizedException("User not authenticated");
+    }
+    return ResponseEntity.ok(
+        java.util.Collections.singletonMap("profilePicture", currentUser.getProfilePicture()));
+  }
+
+  /** Delete the current user's profile picture. */
+  @DeleteMapping("/profile-picture")
+  @Operation(
+      summary = "Delete the current user's profile picture",
+      description = "Removes the picture from storage and clears it from the user profile.")
+  @ApiResponse(responseCode = "204", description = "Profile picture deleted successfully.")
+  @ApiResponse(responseCode = "401", description = "Unauthorized — must be logged in.")
+  public ResponseEntity<Void> deleteProfilePicture() {
+    User currentUser = authService.getCurrentUser();
+    if (currentUser == null) {
+      throw new UnauthorizedException("User not authenticated");
+    }
+
+    profilePictureService.delete(currentUser.getProfilePicture());
+    userService.removeProfilePicture(currentUser);
     return ResponseEntity.noContent().build();
   }
 }

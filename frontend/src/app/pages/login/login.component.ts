@@ -11,6 +11,7 @@ import { CommonModule } from '@angular/common';
 import { extractApiErrorPayload } from '../../core/utils/api-error.util';
 import {
   EXTERNAL_DOMAIN_LINKS,
+  ExternalDomainLink,
   resolveExternalLinkUrl,
 } from '../../config/external-domains.config';
 
@@ -37,6 +38,19 @@ export class LoginComponent implements OnInit {
       username: ['', Validators.required],
       password: ['', Validators.required],
     });
+
+    const externalLink = this.getExternalLink();
+    if (this.authService.isLoggedIn() && externalLink) {
+      this.authService.refresh().subscribe({
+        next: (res) => {
+          this.authService.saveToken(res.token);
+          this.redirectToExternalLink(externalLink, res.token);
+        },
+        error: () => {
+          // Refresh failed; keep the login form available for re-authentication.
+        },
+      });
+    }
   }
 
   onSubmit(): void {
@@ -51,15 +65,9 @@ export class LoginComponent implements OnInit {
 
     this.authService.login(username, password).subscribe({
       next: (res) => {
-        const externalLinkName =
-          this.route.snapshot.queryParamMap.get('externalLink');
-        const externalLink = EXTERNAL_DOMAIN_LINKS.find(
-          (link) => link.name === externalLinkName,
-        );
-        if (externalLink?.forwardVaultWebToken) {
-          window.location.assign(
-            resolveExternalLinkUrl(externalLink, res.token),
-          );
+        const externalLink = this.getExternalLink();
+        if (externalLink) {
+          this.redirectToExternalLink(externalLink, res.token);
           return;
         }
 
@@ -79,5 +87,18 @@ export class LoginComponent implements OnInit {
         console.error('Login error:', err);
       },
     });
+  }
+
+  private getExternalLink(): ExternalDomainLink | undefined {
+    const externalLinkName =
+      this.route.snapshot.queryParamMap.get('externalLink');
+    return EXTERNAL_DOMAIN_LINKS.find((link) => link.name === externalLinkName);
+  }
+
+  private redirectToExternalLink(
+    externalLink: ExternalDomainLink,
+    token: string,
+  ): void {
+    window.location.assign(resolveExternalLinkUrl(externalLink, token));
   }
 }

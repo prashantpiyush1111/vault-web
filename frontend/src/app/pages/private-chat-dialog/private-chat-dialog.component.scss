@@ -161,6 +161,13 @@ button {
   letter-spacing: 0.01em;
 }
 
+.chat-sticker {
+  width: clamp(5.5rem, 24vw, 8.5rem);
+  aspect-ratio: 1;
+  display: block;
+  object-fit: contain;
+}
+
 .other-message {
   background: var(--chat-bubble-other-bg) !important;
   color: var(--color-text-primary) !important;
@@ -207,15 +214,25 @@ button {
   color: var(--color-text-muted);
 }
 
+.typing-indicator {
+  color: var(--color-text-muted);
+  min-height: 1.25rem;
+  padding: 0.25rem 0.15rem 0;
+}
+
 .chat-input-row {
   border-top-color: var(--color-border);
   background: var(--color-surface);
+  gap: 0.35rem;
+  align-items: stretch;
 }
 
 .chat-input {
   background: var(--color-input-bg);
   color: var(--color-text-primary);
   border-color: var(--color-input-border);
+  border-radius: 0.5rem 0 0 0.5rem;
+  min-width: 0;
 
   &:focus {
     border-color: var(--color-input-focus-border);
@@ -228,6 +245,100 @@ button {
   }
 }
 
+.composer-tool-btn {
+  width: 2.5rem;
+  min-width: 2.5rem;
+  border-radius: 0.5rem;
+  border: 1px solid var(--color-border);
+  background: var(--color-surface);
+  color: var(--color-text-secondary);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+
+  .pi {
+    font-size: 1rem;
+  }
+
+  &:hover,
+  &.is-active {
+    color: var(--color-primary);
+    border-color: var(--color-primary);
+    background: color-mix(in srgb, var(--color-primary) 10%, transparent);
+  }
+}
+
+.reaction-popover {
+  position: absolute;
+  left: 1rem;
+  right: 1rem;
+  bottom: calc(100% + 0.55rem);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: 0.75rem;
+  box-shadow: 0 14px 36px
+    color-mix(in srgb, var(--color-shadow-md) 60%, transparent);
+  padding: 0.7rem;
+  z-index: 2;
+}
+
+.emoji-grid {
+  display: grid;
+  grid-template-columns: repeat(8, minmax(2rem, 1fr));
+  gap: 0.35rem;
+}
+
+.emoji-option {
+  aspect-ratio: 1;
+  border-radius: 0.5rem;
+  border: 1px solid transparent;
+  background: transparent;
+  font-size: 1.35rem;
+  line-height: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+
+  &:hover,
+  &:focus-visible {
+    border-color: var(--color-border-hover);
+    background: var(--color-surface-hover);
+  }
+}
+
+.sticker-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(3.25rem, 1fr));
+  gap: 0.55rem;
+}
+
+.sticker-option {
+  aspect-ratio: 1;
+  border-radius: 0.65rem;
+  border: 1px solid var(--color-border);
+  background: var(--color-background-secondary);
+  padding: 0.35rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+
+  img {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+  }
+
+  &:hover,
+  &:focus-visible {
+    border-color: var(--color-primary);
+    background: color-mix(
+      in srgb,
+      var(--color-primary) 8%,
+      var(--color-surface)
+    );
+  }
+}
+
 .send-btn {
   background: var(--chat-accent-bg);
   border: 1px solid var(--chat-accent-border);
@@ -235,9 +346,34 @@ button {
     color-mix(in srgb, var(--chat-accent-bg) 36%, transparent);
   color: #fff;
   min-width: 6rem;
+  border-radius: 0 0.5rem 0.5rem 0;
 
   &:hover {
     background: var(--chat-accent-hover);
     color: #fff;
+  }
+}
+
+@media (max-width: 520px) {
+  .chat-input-row {
+    padding-inline: 0.75rem !important;
+  }
+
+  .reaction-popover {
+    left: 0.75rem;
+    right: 0.75rem;
+  }
+
+  .emoji-grid {
+    grid-template-columns: repeat(4, minmax(2.4rem, 1fr));
+  }
+
+  .sticker-grid {
+    grid-template-columns: repeat(2, minmax(4.2rem, 1fr));
+  }
+
+  .send-btn {
+    min-width: 4.25rem;
+    padding-inline: 0.8rem !important;
   }
 }

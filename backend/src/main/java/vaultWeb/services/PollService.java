@@ -6,6 +6,7 @@ import java.util.List;
 import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import vaultWeb.dtos.PollRequestDto;
 import vaultWeb.dtos.PollResponseDto;
 import vaultWeb.exceptions.AlreadyVotedException;
@@ -177,6 +178,26 @@ public class PollService {
     return new PollContext(poll.getGroup(), poll.getPrivateChat());
   }
 
+  private Poll getPollForGroup(Long groupId, Long pollId) {
+    Poll poll =
+        pollRepository.findById(pollId).orElseThrow(() -> new PollNotFoundException(pollId));
+    if (poll.getGroup() == null || !poll.getGroup().getId().equals(groupId)) {
+      throw new PollDoesNotBelongToGroupException(
+          "Poll with id " + pollId + " does not belong to group with id " + groupId);
+    }
+    return poll;
+  }
+
+  private Poll getPollForPrivateChat(Long privateChatId, Long pollId) {
+    Poll poll =
+        pollRepository.findById(pollId).orElseThrow(() -> new PollNotFoundException(pollId));
+    if (poll.getPrivateChat() == null || !poll.getPrivateChat().getId().equals(privateChatId)) {
+      throw new PollDoesNotBelongToGroupException(
+          "Poll with id " + pollId + " does not belong to private chat with id " + privateChatId);
+    }
+    return poll;
+  }
+
   /**
    * Allows a user to vote for a specific option in a poll within a group.
    *
@@ -195,6 +216,18 @@ public class PollService {
     Poll poll =
         pollRepository.findById(pollId).orElseThrow(() -> new PollNotFoundException(pollId));
 
+    vote(poll, optionId, user);
+  }
+
+  public void voteInGroup(Long groupId, Long pollId, Long optionId, User user) {
+    vote(getPollForGroup(groupId, pollId), optionId, user);
+  }
+
+  public void voteInPrivateChat(Long privateChatId, Long pollId, Long optionId, User user) {
+    vote(getPollForPrivateChat(privateChatId, pollId), optionId, user);
+  }
+
+  private void vote(Poll poll, Long optionId, User user) {
     PollContext pollContext = toPollContext(poll);
     validateContextAccess(pollContext, user);
 
@@ -205,10 +238,10 @@ public class PollService {
             .orElseThrow(
                 () ->
                     new PollOptionNotFoundException(
-                        "optionId: " + optionId + " not found in pollId: " + pollId));
+                        "optionId: " + optionId + " not found in pollId: " + poll.getId()));
 
     if (pollVoteRepository.existsByOption_PollAndUser(poll, user)) {
-      throw new AlreadyVotedException(pollId, user.getId());
+      throw new AlreadyVotedException(poll.getId(), user.getId());
     }
 
     PollVote vote = PollVote.builder().option(option).user(user).build();
@@ -236,6 +269,19 @@ public class PollService {
     Poll poll =
         pollRepository.findById(pollId).orElseThrow(() -> new PollNotFoundException(pollId));
 
+    return updatePoll(poll, user, pollDto);
+  }
+
+  public Poll updatePollInGroup(Long groupId, Long pollId, User user, PollRequestDto pollDto) {
+    return updatePoll(getPollForGroup(groupId, pollId), user, pollDto);
+  }
+
+  public Poll updatePollInPrivateChat(
+      Long privateChatId, Long pollId, User user, PollRequestDto pollDto) {
+    return updatePoll(getPollForPrivateChat(privateChatId, pollId), user, pollDto);
+  }
+
+  private Poll updatePoll(Poll poll, User user, PollRequestDto pollDto) {
     PollContext pollContext = toPollContext(poll);
     validateContextAccess(pollContext, user);
 
@@ -271,9 +317,24 @@ public class PollService {
    * @throws UnauthorizedException if the user is not the author
    * @throws PollDoesNotBelongToGroupException if the poll doesn't belong to the group
    */
+  @Transactional
   public void deletePoll(Long pollId, User user) {
     Poll poll =
         pollRepository.findById(pollId).orElseThrow(() -> new PollNotFoundException(pollId));
+    deletePoll(poll, user);
+  }
+
+  @Transactional
+  public void deletePollInGroup(Long groupId, Long pollId, User user) {
+    deletePoll(getPollForGroup(groupId, pollId), user);
+  }
+
+  @Transactional
+  public void deletePollInPrivateChat(Long privateChatId, Long pollId, User user) {
+    deletePoll(getPollForPrivateChat(privateChatId, pollId), user);
+  }
+
+  private void deletePoll(Poll poll, User user) {
     PollContext pollContext = toPollContext(poll);
     validateContextAccess(pollContext, user);
 

@@ -49,9 +49,15 @@ JDBC metadata, causing cascading startup failures.
 
 ### Solution
 
-Avoid relying on JVM default timezone values at startup.
+As of this fix, the backend pins the JVM default timezone to **UTC** itself at startup
+(`BackendApplication.pinDefaultTimeZone()`), before any JDBC connection is opened. This removes
+the dependency on the host's tzdata, so the error above should no longer occur regardless of how
+the backend is launched (`mvnw`, IDE run config, packaged jar).
 
-**Option 1: Explicitly set JVM timezone (recommended)**
+If you still hit this (e.g. on an older checkout, or after pulling without rebuilding), the manual
+workarounds below still apply:
+
+**Option 1: Explicitly set JVM timezone**
 
 Pass a valid timezone identifier via JVM arguments. Using **UTC** is the safest way to ensure consistency across environments.
 
@@ -75,6 +81,9 @@ Asia/Kolkata
 UTC
 ```
 Then restart the backend.
+
+**Need a non-UTC default?** Set the `APP_TIMEZONE` environment variable (e.g. `APP_TIMEZONE=Asia/Kolkata`).
+It is honored both by `pinDefaultTimeZone()` and by `hibernate.jdbc.time_zone`, so the two stay in sync.
 
 ---
 

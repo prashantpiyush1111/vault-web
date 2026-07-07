@@ -75,7 +75,43 @@ export class AuthService {
   }
 
   isLoggedIn(): boolean {
-    return !!localStorage.getItem('token');
+    const token = localStorage.getItem('token');
+    if (!token) {
+      return false;
+    }
+    const payload = this.decodeTokenPayload(token);
+    // A token we cannot decode is treated as logged-out (fail closed), so a stale or
+    // malformed token never grants navigation to protected pages. A valid token with no
+    // `exp` claim never expires and stays logged in; otherwise it must not be past expiry.
+    if (payload === null) {
+      return false;
+    }
+    if (typeof payload.exp !== 'number') {
+      return true;
+    }
+    return Date.now() < payload.exp * 1000;
+  }
+
+  private decodeTokenPayload(token: string): { exp?: number } | null {
+    const parts = token.split('.');
+    if (parts.length !== 3) {
+      return null;
+    }
+    try {
+      return JSON.parse(this.decodeBase64Url(parts[1])) as { exp?: number };
+    } catch {
+      return null;
+    }
+  }
+
+  // JWT payloads are base64url-encoded UTF-8; decode to bytes and run them through
+  // TextDecoder so non-ASCII claims don't corrupt the parse.
+  private decodeBase64Url(value: string): string {
+    const base64 = value.replace(/-/g, '+').replace(/_/g, '/');
+    const padded = base64 + '='.repeat((4 - (base64.length % 4)) % 4);
+    const binary = atob(padded);
+    const bytes = Uint8Array.from(binary, (char) => char.charCodeAt(0));
+    return new TextDecoder('utf-8').decode(bytes);
   }
 
   logout(): void {

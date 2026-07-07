@@ -5,16 +5,33 @@
     <div>
       <h1 class="cloud-title text-base sm:text-lg">Cloud Page</h1>
       <p class="cloud-subtitle text-xxs sm:text-xs">
-        {{ totalItemsInView }} items in this folder
+        <ng-container *ngIf="searchActive">
+          {{ totalItemsInView }} result{{
+            totalItemsInView === 1 ? "" : "s"
+          }}
+          for "{{ searchQuery }}"
+        </ng-container>
+        <ng-container *ngIf="!searchActive">
+          {{ totalItemsInView }} items in this folder
+        </ng-container>
       </p>
     </div>
-    <p-button
-      label="Refresh"
-      icon="pi pi-refresh"
-      [outlined]="true"
-      styleClass="p-button-sm cloud-accent-btn text-xxs sm:text-xs"
-      (click)="reloadRootFolder()"
-    ></p-button>
+    <div class="cloud-headline-actions">
+      <p-button
+        label="Trash"
+        icon="pi pi-trash"
+        [outlined]="true"
+        styleClass="p-button-sm cloud-accent-btn text-xxs sm:text-xs"
+        (click)="goToTrash()"
+      ></p-button>
+      <p-button
+        label="Refresh"
+        icon="pi pi-refresh"
+        [outlined]="true"
+        styleClass="p-button-sm cloud-accent-btn text-xxs sm:text-xs"
+        (click)="reloadCurrentFolder()"
+      ></p-button>
+    </div>
   </section>
 
   <section class="cloud-toolbar-wrap">
@@ -26,7 +43,7 @@
             icon="pi pi-plus"
             [outlined]="true"
             styleClass="p-button-sm cloud-accent-btn text-xxs sm:text-xs"
-            (click)="toggleCreateMenu($event, createMenu)"
+            (click)="toggleMenu($event, createMenu)"
           ></p-button>
           <p-menu
             #createMenu
@@ -34,8 +51,42 @@
             [appendTo]="'body'"
             [model]="createMenuItems"
           ></p-menu>
+          <p-button
+            label="Sort"
+            icon="pi pi-sort-alt"
+            [outlined]="true"
+            styleClass="p-button-sm cloud-accent-btn text-xxs sm:text-xs"
+            (click)="toggleMenu($event, sortMenu)"
+          ></p-button>
+          <p-menu
+            #sortMenu
+            [popup]="true"
+            [appendTo]="'body'"
+            [model]="sortMenuItems"
+          ></p-menu>
+          <span class="cloud-search">
+            <i class="pi pi-search cloud-search-icon"></i>
+            <input
+              pInputText
+              type="text"
+              [(ngModel)]="searchQuery"
+              (keydown.enter)="onSearch()"
+              placeholder="Search this folder"
+              class="cloud-search-input text-xxs sm:text-xs"
+            />
+            <button
+              *ngIf="searchActive || searchQuery"
+              type="button"
+              class="cloud-search-clear"
+              aria-label="Clear search"
+              (click)="clearSearch()"
+            >
+              <i class="pi pi-times"></i>
+            </button>
+          </span>
           <input
             #fileUploadInput
+            multiple
             type="file"
             class="hidden"
             (change)="onFileSelected($event)"
@@ -47,7 +98,23 @@
           [model]="breadcrumbItems"
           [home]="homeBreadcrumb"
           styleClass="cloud-breadcrumb text-xxs sm:text-xs"
-        ></p-breadcrumb>
+        >
+          <ng-template pTemplate="item" let-item>
+            <a
+              class="p-menuitem-link cursor-pointer"
+              [class.drag-over]="draggedOverPath === item.id"
+              (drop)="onBreadcrumbDrop($event, item.id)"
+              (dragover)="onBreadcrumbDragOver($event, item.id)"
+              (dragleave)="onDragLeave()"
+              (click)="item.command ? item.command() : null"
+            >
+              <span *ngIf="item.icon" [class]="item.icon"></span>
+              <span *ngIf="item.label" class="p-menuitem-text">{{
+                item.label
+              }}</span>
+            </a>
+          </ng-template>
+        </p-breadcrumb>
       </ng-template>
     </p-toolbar>
   </section>
@@ -62,9 +129,22 @@
     {{ error }}
   </div>
 
-  <section *ngIf="currentFolder && !loading" class="cloud-table-wrap">
+  <section
+    *ngIf="currentFolder && !loading"
+    class="cloud-table-wrap"
+    [class.drag-over]="isExternalDrag"
+    (dragover)="onExternalDragOver($event)"
+    (dragleave)="onExternalDragLeave($event)"
+    (drop)="onExternalDrop($event)"
+  >
     <p-table
       [value]="entries"
+      [lazy]="!searchActive"
+      [paginator]="!searchActive && totalElements > pageSize"
+      [rows]="pageSize"
+      [first]="contentFirst"
+      [totalRecords]="totalElements"
+      (onLazyLoad)="onPageChange($event)"
       styleClass="cloud-table text-xxs sm:text-xs"
       [tableStyle]="{ 'min-width': '100%' }"
     >
@@ -73,14 +153,19 @@
           <th>Name</th>
           <th>Size</th>
           <th>Type</th>
+          <th>Modified</th>
           <th class="text-right">Actions</th>
         </tr>
       </ng-template>
       <ng-template pTemplate="body" let-entry>
         <tr
           class="cloud-row"
+          [class.drag-over]="
+            entry.kind === 'folder' && draggedOverPath === entry.path
+          "
           (drop)="onDrop($event, entry.kind === 'folder' ? entry.path : null)"
-          (dragover)="onDragOver($event)"
+          (dragover)="onDragOver($event, entry.path, entry.kind === 'folder')"
+          (dragleave)="onDragLeave()"
         >
           <td>
             <button
@@ -90,6 +175,7 @@
               (dragstart)="
                 onDragStart($event, entry.path, entry.kind === 'folder')
               "
+              (dragend)="onDragEnd()"
               (click)="
                 entry.kind === 'folder'
                   ? navigateToFolder(entry.path)
@@ -111,6 +197,9 @@
           </td>
           <td class="cloud-muted">{{ entry.sizeLabel }}</td>
           <td class="cloud-muted">{{ entry.typeLabel }}</td>
+          <td class="cloud-muted">
+            {{ entry.lastModifiedAt | date: "short" }}
+          </td>
           <td>
             <div class="cloud-actions">
               <p-button
@@ -146,8 +235,13 @@
       </ng-template>
       <ng-template pTemplate="emptymessage">
         <tr>
-          <td colspan="4" class="cloud-empty text-xxs sm:text-xs">
-            This folder is empty. Create a new folder or file.
+          <td colspan="5" class="cloud-empty text-xxs sm:text-xs">
+            <ng-container *ngIf="searchActive; else emptyFolderMsg">
+              No results for "{{ searchQuery }}".
+            </ng-container>
+            <ng-template #emptyFolderMsg>
+              This folder is empty. Create a new folder or file.
+            </ng-template>
           </td>
         </tr>
       </ng-template>

@@ -19,15 +19,19 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
+import vaultWeb.dtos.ChatMessageDto;
 import vaultWeb.dtos.DeviceDto;
 import vaultWeb.dtos.GroupDto;
 import vaultWeb.exceptions.AlreadyMemberException;
 import vaultWeb.exceptions.UnauthorizedException;
 import vaultWeb.exceptions.notfound.GroupNotFoundException;
 import vaultWeb.exceptions.notfound.NotMemberException;
+import vaultWeb.models.ChatMessage;
 import vaultWeb.models.Device;
 import vaultWeb.models.Group;
 import vaultWeb.models.User;
+import vaultWeb.repositories.ChatMessageRepository;
 import vaultWeb.repositories.DeviceRepository;
 import vaultWeb.repositories.GroupMemberRepository;
 import vaultWeb.services.GroupService;
@@ -41,6 +45,7 @@ class GroupControllerTest {
   @Mock private AuthService authService;
   @Mock private GroupMemberRepository groupMemberRepository;
   @Mock private DeviceRepository deviceRepository;
+  @Mock private ChatMessageRepository chatMessageRepository;
 
   @InjectMocks private GroupController groupController;
 
@@ -325,5 +330,50 @@ class GroupControllerTest {
     assertThrows(UnauthorizedException.class, () -> groupController.getGroupDevices(10L));
     verify(groupMemberRepository, times(0)).findByGroupIdAndUserId(any(), any());
     verify(deviceRepository, times(0)).findByUserIn(any());
+  }
+
+  @Test
+  void shouldGetGroupMessages_WhenUserIsMember() {
+    User currentUser = createTestUser(1L, "member");
+    User sender = createTestUser(2L, "sender");
+    ChatMessage message = new ChatMessage();
+    message.setSender(sender);
+    message.setSenderDeviceId("sender-device");
+    message.setE2eePayload("{\"v\":2}");
+    message.setTimestamp(java.time.Instant.parse("2026-03-26T10:15:30Z"));
+    Authentication authentication = mock(Authentication.class);
+
+    when(authService.getCurrentUser()).thenReturn(currentUser);
+    when(groupMemberRepository.findByGroupIdAndUserId(10L, 1L))
+        .thenReturn(Optional.of(mock(vaultWeb.models.GroupMember.class)));
+    when(chatMessageRepository.findByGroupIdOrderByTimestampAsc(10L)).thenReturn(List.of(message));
+
+    ResponseEntity<List<ChatMessageDto>> response =
+        groupController.getGroupMessages(10L, authentication);
+
+    assertEquals(HttpStatus.OK, response.getStatusCode());
+    assertEquals(1, response.getBody().size());
+    assertEquals("{\"v\":2}", response.getBody().get(0).getE2eePayload());
+    assertEquals(10L, response.getBody().get(0).getGroupId());
+    assertEquals("sender", response.getBody().get(0).getSenderUsername());
+  }
+
+  @Test
+  void shouldRejectGetGroupMessages_WhenUserIsNotMember() {
+    User currentUser = createTestUser(1L, "member");
+    Authentication authentication = mock(Authentication.class);
+
+    when(authService.getCurrentUser()).thenReturn(currentUser);
+    when(groupMemberRepository.findByGroupIdAndUserId(10L, 1L)).thenReturn(Optional.empty());
+
+    assertThrows(
+        NotMemberException.class, () -> groupController.getGroupMessages(10L, authentication));
+    verify(chatMessageRepository, times(0)).findByGroupIdOrderByTimestampAsc(any());
+  }
+
+  @Test
+  void shouldRejectGetGroupMessages_WhenUnauthenticated() {
+    assertThrows(UnauthorizedException.class, () -> groupController.getGroupMessages(10L, null));
+    verify(chatMessageRepository, times(0)).findByGroupIdOrderByTimestampAsc(any());
   }
 }

@@ -13,6 +13,11 @@
   margin-bottom: 0.5rem;
 }
 
+.cloud-headline-actions {
+  display: flex;
+  gap: 0.5rem;
+}
+
 .cloud-title {
   margin: 0;
 }
@@ -36,22 +41,91 @@
   padding: 0.38rem 0.48rem;
 }
 
+:host ::ng-deep .cloud-toolbar .p-toolbar-group-start,
+:host ::ng-deep .cloud-toolbar .p-toolbar-group-end {
+  min-width: 0;
+}
+
+:host ::ng-deep .cloud-toolbar .p-toolbar-group-end {
+  max-width: 100%;
+  overflow-x: auto;
+  overflow-y: hidden;
+}
+
 .cloud-toolbar-start {
   display: flex;
   align-items: center;
+  flex-wrap: wrap;
   gap: 0.4rem;
+}
+
+.cloud-search {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  padding: 0.15rem 0.5rem;
+  border: 1px solid var(--color-input-border);
+  border-radius: 999px;
+  background: var(--color-input-bg);
+}
+
+.cloud-search-icon {
+  color: var(--color-text-secondary);
+  font-size: 0.7rem;
+}
+
+:host ::ng-deep .cloud-search .cloud-search-input.p-inputtext {
+  border: 0;
+  background: transparent;
+  box-shadow: none;
+  padding: 0.1rem 0;
+  width: clamp(6rem, 30vw, 9rem);
+}
+
+.cloud-search-clear {
+  border: 0;
+  background: transparent;
+  color: var(--color-text-secondary);
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  padding: 0;
+}
+
+.cloud-search-clear:hover {
+  color: var(--color-text-primary);
 }
 
 :host ::ng-deep .cloud-breadcrumb {
   border: 0;
   padding: 0;
   background: transparent;
+  max-width: 100%;
+  overflow-x: auto;
+  overflow-y: hidden;
+  white-space: nowrap;
+}
+
+:host ::ng-deep .cloud-breadcrumb .p-breadcrumb-list {
+  flex-wrap: nowrap;
+  min-width: 0;
+}
+
+:host ::ng-deep .cloud-breadcrumb .p-menuitem-link {
+  min-width: 0;
+  max-width: 10rem;
 }
 
 :host ::ng-deep .cloud-breadcrumb .p-breadcrumb-list li .p-menuitem-link,
 :host ::ng-deep .cloud-breadcrumb .p-breadcrumb-list li .p-menuitem-text,
 :host ::ng-deep .cloud-breadcrumb .p-breadcrumb-list li .p-breadcrumb-home {
   color: var(--color-text-secondary);
+}
+
+:host ::ng-deep .cloud-breadcrumb .p-breadcrumb-list li .p-menuitem-text {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 :host
@@ -62,6 +136,22 @@
   .p-menuitem-text {
   color: var(--color-text-primary);
   font-weight: 600;
+}
+
+:host
+  ::ng-deep
+  .cloud-breadcrumb
+  .p-breadcrumb-list
+  li
+  .p-menuitem-link.drag-over {
+  background: color-mix(
+    in srgb,
+    var(--color-primary) 15%,
+    transparent
+  ) !important;
+  outline: 1px dashed var(--color-primary);
+  border-radius: 4px;
+  padding: 2px 4px;
 }
 
 .cloud-state {
@@ -86,7 +176,20 @@
   border: 1px solid var(--color-border);
   background: var(--color-surface);
   box-shadow: 0 6px 14px -14px var(--color-shadow-md);
-  overflow: hidden;
+  overflow-x: auto;
+  overflow-y: hidden;
+  transition:
+    border-color 0.2s ease,
+    box-shadow 0.2s ease,
+    background-color 0.2s ease;
+}
+
+// Highlight the table while external files are dragged over it.
+.cloud-table-wrap.drag-over {
+  border-color: var(--color-primary);
+  background: color-mix(in srgb, var(--color-primary) 8%, var(--color-surface));
+  box-shadow: 0 0 0 2px
+    color-mix(in srgb, var(--color-primary) 25%, transparent);
 }
 
 :host ::ng-deep .cloud-table .p-datatable-table {
@@ -112,6 +215,16 @@
 
 .cloud-row {
   transition: background-color 0.2s ease;
+}
+
+.cloud-row.drag-over {
+  background: color-mix(
+    in srgb,
+    var(--color-primary) 15%,
+    var(--color-surface)
+  ) !important;
+  outline: 2px dashed var(--color-primary);
+  outline-offset: -2px;
 }
 
 .cloud-entry-btn {
@@ -272,5 +385,55 @@
 
   .cloud-toolbar-wrap {
     top: 3.35rem;
+  }
+
+  .cloud-headline {
+    flex-wrap: wrap;
+  }
+
+  .cloud-headline-actions {
+    flex-wrap: wrap;
+  }
+
+  :host ::ng-deep .cloud-toolbar {
+    align-items: stretch;
+    gap: 0.45rem;
+  }
+
+  :host ::ng-deep .cloud-toolbar .p-toolbar-group-start,
+  :host ::ng-deep .cloud-toolbar .p-toolbar-group-end {
+    width: 100%;
+  }
+
+  :host ::ng-deep .cloud-breadcrumb .p-menuitem-link {
+    max-width: 7rem;
+  }
+
+  .cloud-entry-name {
+    max-width: 14rem;
+  }
+}
+
+@media (max-width: 640px) {
+  :host ::ng-deep .cloud-table .p-datatable-thead > tr > th:nth-child(2),
+  :host ::ng-deep .cloud-table .p-datatable-thead > tr > th:nth-child(3),
+  :host ::ng-deep .cloud-table .p-datatable-tbody > tr > td:nth-child(2),
+  :host ::ng-deep .cloud-table .p-datatable-tbody > tr > td:nth-child(3) {
+    display: none;
+  }
+}
+
+@media (max-width: 420px) {
+  :host ::ng-deep .cloud-table .p-datatable-thead > tr > th:nth-child(4),
+  :host ::ng-deep .cloud-table .p-datatable-tbody > tr > td:nth-child(4) {
+    display: none;
+  }
+
+  .cloud-entry-name {
+    max-width: 9rem;
+  }
+
+  :host ::ng-deep .cloud-breadcrumb .p-menuitem-link {
+    max-width: 5.5rem;
   }
 }

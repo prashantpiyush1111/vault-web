@@ -2,8 +2,11 @@ package vaultWeb.models;
 
 public record PollContext(Group group, PrivateChat privateChat) {
   public PollContext {
-    if (isGroup() && isPrivateChat()) {
-      throw new IllegalArgumentException("PollContext must contain either group or private chat");
+    boolean hasGroup = group != null;
+    boolean hasPrivateChat = privateChat != null;
+    if (hasGroup == hasPrivateChat) {
+      throw new IllegalArgumentException(
+          "PollContext must contain exactly one group or private chat");
     }
   }
 

@@ -21,10 +21,10 @@ import vaultWeb.services.auth.AuthService;
 
 /**
  * Controller for managing polls within a specific group. All endpoints are prefixed with
- * /groups/{groupId}/polls.
+ * /api/groups/{groupId}/polls.
  */
 @RestController
-@RequestMapping("/groups/{groupId}/polls")
+@RequestMapping("/api/groups/{groupId}/polls")
 @RequiredArgsConstructor
 public class GroupChatPollController {
 
@@ -116,9 +116,10 @@ public class GroupChatPollController {
   @ApiResponse(
       responseCode = "401",
       description = "Unauthorized request. You must provide an authentication token.")
-  public ResponseEntity<Void> vote(@PathVariable Long pollId, @PathVariable Long optionId) {
+  public ResponseEntity<Void> vote(
+      @PathVariable Long groupId, @PathVariable Long pollId, @PathVariable Long optionId) {
     User currentUser = authService.getCurrentUser();
-    pollService.vote(pollId, optionId, currentUser);
+    pollService.voteInGroup(groupId, pollId, optionId, currentUser);
     return ResponseEntity.status(HttpStatus.NO_CONTENT).build();
   }
 
@@ -142,9 +143,11 @@ public class GroupChatPollController {
       responseCode = "401",
       description = "Unauthorized request. You must provide an authentication token.")
   public ResponseEntity<PollResponseDto> updatePoll(
-      @PathVariable Long pollId, @RequestBody @Valid PollRequestDto pollDto) {
+      @PathVariable Long groupId,
+      @PathVariable Long pollId,
+      @RequestBody @Valid PollRequestDto pollDto) {
     User currentUser = authService.getCurrentUser();
-    Poll updatedPoll = pollService.updatePoll(pollId, currentUser, pollDto);
+    Poll updatedPoll = pollService.updatePollInGroup(groupId, pollId, currentUser, pollDto);
     return ResponseEntity.ok(pollService.toResponseDto(updatedPoll));
   }
 
@@ -166,9 +169,9 @@ public class GroupChatPollController {
   @ApiResponse(
       responseCode = "401",
       description = "Unauthorized request. You must provide an authentication token.")
-  public ResponseEntity<Void> deletePoll(@PathVariable Long pollId) {
+  public ResponseEntity<Void> deletePoll(@PathVariable Long groupId, @PathVariable Long pollId) {
     User currentUser = authService.getCurrentUser();
-    pollService.deletePoll(pollId, currentUser);
+    pollService.deletePollInGroup(groupId, pollId, currentUser);
     return ResponseEntity.noContent().build();
   }
 }

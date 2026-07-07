@@ -83,3 +83,48 @@ body {
 .vw-toast .p-toast-message .p-toast-detail {
   opacity: 0.92;
 }
+
+/* Global Error Page Styles */
+.error-page {
+  background-color: var(--color-background-secondary);
+}
+
+.error-card {
+  background-color: var(--color-surface);
+  box-shadow: 0 4px 6px var(--color-shadow);
+}
+
+.error-icon {
+  display: block;
+  font-size: 3.5rem;
+  color: var(--color-primary);
+}
+
+.error-code {
+  font-size: 4rem;
+  line-height: 1;
+  color: var(--color-text-primary);
+}
+
+.error-title {
+  font-size: 1.25rem;
+  color: var(--color-text-primary);
+}
+
+.error-message {
+  color: var(--color-text-secondary);
+  font-size: 0.95rem;
+  line-height: 1.5;
+}
+
+.error-btn {
+  background: var(--color-primary-strong);
+  border: 1px solid
+    color-mix(in srgb, var(--color-primary-strong) 82%, #0f172a 18%);
+  text-decoration: none;
+  transition: background-color 0.2s ease;
+
+  &:hover {
+    background: var(--color-primary-hover);
+  }
+}

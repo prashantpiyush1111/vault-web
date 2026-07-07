@@ -27,6 +27,7 @@ import vaultWeb.models.User;
 import vaultWeb.repositories.ChatMessageRepository;
 import vaultWeb.repositories.DeviceRepository;
 import vaultWeb.repositories.PrivateChatRepository;
+import vaultWeb.services.ChatService;
 import vaultWeb.services.PrivateChatService;
 
 @ExtendWith(MockitoExtension.class)
@@ -36,6 +37,7 @@ class PrivateChatControllerTest {
   @Mock private ChatMessageRepository chatMessageRepository;
   @Mock private DeviceRepository deviceRepository;
   @Mock private PrivateChatRepository privateChatRepository;
+  @Mock private ChatService chatService;
 
   @InjectMocks private PrivateChatController privateChatController;
 
@@ -129,6 +131,11 @@ class PrivateChatControllerTest {
     when(privateChatRepository.findById(7L)).thenReturn(Optional.of(chat));
     when(chatMessageRepository.findByPrivateChatIdOrderByTimestampAsc(7L))
         .thenReturn(List.of(message));
+    ChatMessageDto dto = new ChatMessageDto();
+    dto.setPrivateChatId(7L);
+    dto.setSenderUsername("alice");
+    dto.setE2eePayload("{\"v\":1}");
+    when(chatService.toDto(message)).thenReturn(dto);
 
     List<ChatMessageDto> response =
         privateChatController.getPrivateChatMessages(7L, authentication);

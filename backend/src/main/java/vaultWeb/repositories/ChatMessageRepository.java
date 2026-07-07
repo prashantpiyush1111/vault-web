@@ -12,6 +12,8 @@ import vaultWeb.models.User;
 public interface ChatMessageRepository extends JpaRepository<ChatMessage, Long> {
   List<ChatMessage> findByPrivateChatIdOrderByTimestampAsc(Long privateChatId);
 
+  List<ChatMessage> findByGroupIdOrderByTimestampAsc(Long groupId);
+
   long countBySender(User sender);
 
   List<ChatMessage> findTop10BySenderOrderByTimestampDesc(User sender);

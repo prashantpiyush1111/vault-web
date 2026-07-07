@@ -4,6 +4,7 @@ import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 
+import java.util.List;
 import java.util.Optional;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -11,13 +12,16 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import vaultWeb.dtos.ChatMessageDto;
+import vaultWeb.dtos.PollResponseDto;
 import vaultWeb.exceptions.notfound.GroupNotFoundException;
 import vaultWeb.exceptions.notfound.PrivateChatNotFoundException;
 import vaultWeb.exceptions.notfound.UserNotFoundException;
 import vaultWeb.models.ChatMessage;
 import vaultWeb.models.Group;
+import vaultWeb.models.Poll;
 import vaultWeb.models.PrivateChat;
 import vaultWeb.models.User;
+import vaultWeb.models.enums.MessageType;
 import vaultWeb.repositories.ChatMessageRepository;
 import vaultWeb.repositories.GroupRepository;
 import vaultWeb.repositories.PrivateChatRepository;
@@ -38,6 +42,8 @@ class ChatServiceTest {
   @Mock private GroupRepository groupRepository;
 
   @Mock private PrivateChatRepository privateChatRepository;
+
+  @Mock private PollService pollService;
 
   @InjectMocks private ChatService chatService;
 
@@ -81,6 +87,7 @@ class ChatServiceTest {
     assertEquals(SENDER_DEVICE_ID, result.getSenderDeviceId());
     assertEquals(sender, result.getSender());
     assertEquals(group, result.getGroup());
+    assertEquals(MessageType.TEXT, result.getMessageType());
     verify(chatMessageRepository).save(any(ChatMessage.class));
   }
 
@@ -104,7 +111,49 @@ class ChatServiceTest {
     assertEquals(privateChat, result.getPrivateChat());
     assertEquals(VALID_E2EE_PAYLOAD, result.getE2eePayload());
     assertEquals(SENDER_DEVICE_ID, result.getSenderDeviceId());
+    assertEquals(MessageType.TEXT, result.getMessageType());
     verify(chatMessageRepository).save(any(ChatMessage.class));
+  }
+
+  @Test
+  void shouldMapMessageWithoutTypeAsText() {
+    User sender = createUser(1L, "user1");
+    Group group = createGroup(10L);
+    ChatMessage message = new ChatMessage();
+    message.setSender(sender);
+    message.setGroup(group);
+    message.setTimestamp(java.time.Instant.parse("2026-03-26T10:15:30Z"));
+    message.setE2eePayload(VALID_E2EE_PAYLOAD);
+    message.setSenderDeviceId(SENDER_DEVICE_ID);
+
+    ChatMessageDto dto = chatService.toDto(message);
+
+    assertEquals(MessageType.TEXT, dto.getMessageType());
+    assertEquals(VALID_E2EE_PAYLOAD, dto.getE2eePayload());
+    assertEquals(10L, dto.getGroupId());
+    assertEquals("user1", dto.getSenderUsername());
+  }
+
+  @Test
+  void shouldMapPollMessageWithPollPayload() {
+    User sender = createUser(1L, "user1");
+    Group group = createGroup(10L);
+    Poll poll = Poll.builder().id(99L).question("Question?").author(sender).build();
+    PollResponseDto pollResponse = new PollResponseDto(99L, "Question?", false, List.of());
+    ChatMessage message = new ChatMessage();
+    message.setSender(sender);
+    message.setGroup(group);
+    message.setTimestamp(java.time.Instant.parse("2026-03-26T10:15:30Z"));
+    message.setMessageType(MessageType.POLL);
+    message.setPoll(poll);
+
+    when(pollService.toResponseDto(poll)).thenReturn(pollResponse);
+
+    ChatMessageDto dto = chatService.toDto(message);
+
+    assertEquals(MessageType.POLL, dto.getMessageType());
+    assertEquals(pollResponse, dto.getPoll());
+    assertNull(dto.getE2eePayload());
   }
 
   @Test

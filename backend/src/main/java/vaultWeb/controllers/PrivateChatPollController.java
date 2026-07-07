@@ -17,7 +17,7 @@ import vaultWeb.services.PollService;
 import vaultWeb.services.auth.AuthService;
 
 @RestController
-@RequestMapping("/private-chats/{privateChatId}/polls")
+@RequestMapping("/api/private-chats/{privateChatId}/polls")
 @RequiredArgsConstructor
 public class PrivateChatPollController {
 
@@ -81,9 +81,10 @@ public class PrivateChatPollController {
   @ApiResponse(
       responseCode = "401",
       description = "Unauthorized request. You must provide an authentication token.")
-  public ResponseEntity<Void> vote(@PathVariable Long pollId, @PathVariable Long optionId) {
+  public ResponseEntity<Void> vote(
+      @PathVariable Long privateChatId, @PathVariable Long pollId, @PathVariable Long optionId) {
     User currentUser = authService.getCurrentUser();
-    pollService.vote(pollId, optionId, currentUser);
+    pollService.voteInPrivateChat(privateChatId, pollId, optionId, currentUser);
     return ResponseEntity.status(HttpStatus.NO_CONTENT).build();
   }
 
@@ -107,9 +108,12 @@ public class PrivateChatPollController {
       responseCode = "401",
       description = "Unauthorized request. You must provide an authentication token.")
   public ResponseEntity<PollResponseDto> updatePoll(
-      @PathVariable Long pollId, @RequestBody @Valid PollRequestDto pollDto) {
+      @PathVariable Long privateChatId,
+      @PathVariable Long pollId,
+      @RequestBody @Valid PollRequestDto pollDto) {
     User currentUser = authService.getCurrentUser();
-    Poll updatedPoll = pollService.updatePoll(pollId, currentUser, pollDto);
+    Poll updatedPoll =
+        pollService.updatePollInPrivateChat(privateChatId, pollId, currentUser, pollDto);
     return ResponseEntity.ok(pollService.toResponseDto(updatedPoll));
   }
 
@@ -131,9 +135,10 @@ public class PrivateChatPollController {
   @ApiResponse(
       responseCode = "401",
       description = "Unauthorized request. You must provide an authentication token.")
-  public ResponseEntity<Void> deletePoll(@PathVariable Long pollId) {
+  public ResponseEntity<Void> deletePoll(
+      @PathVariable Long privateChatId, @PathVariable Long pollId) {
     User currentUser = authService.getCurrentUser();
-    pollService.deletePoll(pollId, currentUser);
+    pollService.deletePollInPrivateChat(privateChatId, pollId, currentUser);
     return ResponseEntity.noContent().build();
   }
 
