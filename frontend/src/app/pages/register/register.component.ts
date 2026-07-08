@@ -31,6 +31,16 @@ import { UiToastService } from '../../core/services/ui-toast.service';
 export class RegisterComponent implements OnInit {
   submitted = false;
   errorMessage = '';
+  showPassword = false;
+  showConfirmPassword = false;
+
+  togglePasswordVisibility(): void {
+    this.showPassword = !this.showPassword;
+  }
+
+  toggleConfirmPasswordVisibility(): void {
+    this.showConfirmPassword = !this.showConfirmPassword;
+  }
 
   registerForm!: ReturnType<FormBuilder['group']>;
 

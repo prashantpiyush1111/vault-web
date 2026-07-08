@@ -25,6 +25,11 @@ export class LoginComponent implements OnInit {
   loginForm!: FormGroup;
   submitted = false;
   errorMessage = '';
+  showPassword = false;
+
+  togglePasswordVisibility(): void {
+    this.showPassword = !this.showPassword;
+  }
 
   constructor(
     private fb: FormBuilder,

@@ -26,15 +26,28 @@
 
     <div class="mt-4">
       <label for="password" class="block font-semibold mb-1">Password</label>
-      <input
-        id="password"
-        formControlName="password"
-        type="password"
-        class="w-full px-3 py-2 border rounded focus:outline-none mb-1"
-        [ngClass]="{
-          'border-red-500': submitted && loginForm.get('password')?.errors,
-        }"
-      />
+      <div class="relative flex items-center">
+        <input
+          id="password"
+          formControlName="password"
+          [type]="showPassword ? 'text' : 'password'"
+          class="w-full pl-3 pr-10 py-2 border rounded focus:outline-none mb-1"
+          [ngClass]="{
+            'border-red-500': submitted && loginForm.get('password')?.errors,
+          }"
+        />
+        <button
+          type="button"
+          class="absolute right-3 flex items-center text-gray-500 hover:text-gray-700 focus:outline-none cursor-pointer mb-1"
+          (click)="togglePasswordVisibility()"
+          [attr.aria-label]="showPassword ? 'Hide password' : 'Show password'"
+        >
+          <i
+            class="pi"
+            [ngClass]="showPassword ? 'pi-eye-slash' : 'pi-eye'"
+          ></i>
+        </button>
+      </div>
       <div
         *ngIf="submitted && loginForm.get('password')?.errors"
         class="text-red-500 text-sm"
