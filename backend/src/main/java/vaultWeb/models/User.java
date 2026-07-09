@@ -21,7 +21,8 @@ public class User {
   private Long id;
 
   private String username;
-  private String password;
+
+  @JsonIgnore private String password;
 
   // Stores the relative file path to the user's profile picture.
   // Example value: "uploads/profile-pictures/42_abc123.jpg"

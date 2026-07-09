@@ -506,7 +506,8 @@ export class PrivateChatDialogComponent
       const message: ChatMessageDto = {
         timestamp: clientTimestamp,
         senderUsername: this.currentUsername ? this.currentUsername : 'Unknown',
-        privateChatId: (this.isGroupChat ? undefined : this.privateChatId) ?? undefined,
+        privateChatId:
+          (this.isGroupChat ? undefined : this.privateChatId) ?? undefined,
         groupId: this.isGroupChat ? this.groupId : null,
         senderDeviceId: payload.senderDeviceId,
         e2eePayload: JSON.stringify(payload),

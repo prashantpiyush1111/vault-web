@@ -101,7 +101,10 @@
           [ngClass]="{ 'overflow-hidden': getAvatarPicUrl(msg.senderUsername) }"
         >
           <ng-container
-            *ngIf="getAvatarPicUrl(msg.senderUsername) as picUrl; else noPicOther"
+            *ngIf="
+              getAvatarPicUrl(msg.senderUsername) as picUrl;
+              else noPicOther
+            "
           >
             <img
               [src]="picUrl"
@@ -154,7 +157,10 @@
           [ngClass]="{ 'overflow-hidden': getAvatarPicUrl(msg.senderUsername) }"
         >
           <ng-container
-            *ngIf="getAvatarPicUrl(msg.senderUsername) as picUrl; else noPicCurrent"
+            *ngIf="
+              getAvatarPicUrl(msg.senderUsername) as picUrl;
+              else noPicCurrent
+            "
           >
             <img
               [src]="picUrl"

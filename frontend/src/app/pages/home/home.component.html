@@ -336,7 +336,9 @@
   [username]="selectedUsername || ''"
   [currentUsername]="currentUsername"
   [privateChatId]="privateChatId"
-  [otherUserPicUrl]="getProfilePictureUrl(getUserByUsername(selectedUsername || ''))"
+  [otherUserPicUrl]="
+    getProfilePictureUrl(getUserByUsername(selectedUsername || ''))
+  "
   [currentUserPicUrl]="getProfilePictureUrl(getCurrentUser())"
   [groupId]="selectedGroupId"
   [groupName]="selectedGroupName"
