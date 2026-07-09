@@ -418,7 +418,8 @@ export class HomeComponent implements OnInit {
     return this.userService.getProfilePictureUrl(user.profilePicture);
   }
 
-  private isHttpStatusZero(err: any): boolean {
-    return err && err.status === 0;
+  private isHttpStatusZero(err: unknown): boolean {
+    const candidate = err as { status?: number };
+    return candidate?.status === 0;
   }
 }

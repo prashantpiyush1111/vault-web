@@ -297,49 +297,6 @@ public class GroupController {
   }
 
   /**
-   * Retrieves messages of a group.
-   *
-   * @param id the ID of the group
-   * @return a list of messages
-   */
-  @GetMapping("/{id}/messages")
-  @Operation(summary = "Retrieves messages of a group.")
-  @ApiResponse(responseCode = "200", description = "Messages retrieved successfully")
-  @ApiResponse(
-      responseCode = "401",
-      description = "Unauthorized request. You must provide an authentication token.")
-  @ApiResponse(
-      responseCode = "403",
-      description = "Unauthorized request. You must be a member of the group.")
-  public ResponseEntity<List<ChatMessageDto>> getGroupMessages(@PathVariable Long id) {
-    User currentUser = authService.getCurrentUser();
-    if (currentUser == null) {
-      throw new UnauthorizedException("User not authenticated");
-    }
-    if (groupMemberRepository.findByGroupIdAndUserId(id, currentUser.getId()).isEmpty()) {
-      throw new NotMemberException(id, currentUser.getId());
-    }
-
-    List<ChatMessage> messages = chatMessageRepository.findByGroupIdOrderByTimestampAsc(id);
-    List<ChatMessageDto> dtos = messages.stream()
-        .map(
-            message -> {
-              ChatMessageDto dto = new ChatMessageDto();
-              dto.setE2eePayload(message.getE2eePayload());
-              dto.setTimestamp(message.getTimestamp().toString());
-              dto.setGroupId(id);
-              dto.setPrivateChatId(null);
-              dto.setSenderId(message.getSender().getId());
-              dto.setSenderUsername(message.getSender().getUsername());
-              dto.setSenderDeviceId(message.getSenderDeviceId());
-              return dto;
-            })
-        .toList();
-
-    return ResponseEntity.ok(dtos);
-  }
-
-  /**
    * Adds a member to a group. Admin privileges required.
    *
    * @param groupId the ID of the group

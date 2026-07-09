@@ -758,7 +758,7 @@ export class PrivateChatDialogComponent
     );
   }
 
-getAvatarPicUrl(senderUsername: string | undefined): string | null {
+  getAvatarPicUrl(senderUsername: string | undefined): string | null {
     if (!senderUsername) {
       return null;
     }

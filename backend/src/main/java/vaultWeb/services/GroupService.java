@@ -210,9 +210,7 @@ public class GroupService {
    * @return a list of groups where the user is a member
    */
   public List<Group> getUserGroups(User user) {
-    return groupMemberRepository.findAllByUser(user).stream()
-        .map(GroupMember::getGroup)
-        .toList();
+    return groupMemberRepository.findAllByUser(user).stream().map(GroupMember::getGroup).toList();
   }
 
   /**
@@ -233,8 +231,7 @@ public class GroupService {
             .findById(userId)
             .orElseThrow(() -> new UserNotFoundException("User not found with id: " + userId));
 
-    boolean alreadyMember =
-        groupMemberRepository.findByGroupAndUser(group, user).isPresent();
+    boolean alreadyMember = groupMemberRepository.findByGroupAndUser(group, user).isPresent();
     if (alreadyMember) {
       throw new AlreadyMemberException(groupId, userId);
     }

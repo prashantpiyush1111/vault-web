@@ -3,8 +3,6 @@ import { Injectable } from '@angular/core';
 import { Observable } from 'rxjs';
 import { environment } from '../../environments/environment';
 import { GroupDto } from '../models/dtos/GroupDto';
-import { ChatMessageDto } from '../models/dtos/ChatMessageDto';
-import { DeviceDto } from '../models/dtos/DeviceDto';
 
 @Injectable({
   providedIn: 'root',
@@ -16,16 +14,6 @@ export class GroupService {
 
   getUserGroups(): Observable<GroupDto[]> {
     return this.http.get<GroupDto[]>(`${this.apiUrl}/my-groups`);
-  }
-
-  getGroupMessages(groupId: number): Observable<ChatMessageDto[]> {
-    return this.http.get<ChatMessageDto[]>(
-      `${this.apiUrl}/${groupId}/messages`,
-    );
-  }
-
-  getGroupDevices(groupId: number): Observable<DeviceDto[]> {
-    return this.http.get<DeviceDto[]>(`${this.apiUrl}/${groupId}/devices`);
   }
 
   getGroupDetails(groupId: number): Observable<GroupDto> {
