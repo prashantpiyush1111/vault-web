@@ -128,3 +128,42 @@ body {
     background: var(--color-primary-hover);
   }
 }
+
+/* Password visibility toggle – shared across auth & password forms */
+.input-group {
+  display: flex;
+  align-items: center;
+  position: relative;
+
+  input {
+    width: 100%;
+    padding-right: 40px;
+  }
+}
+
+.icon-btn-inline {
+  position: absolute;
+  right: 8px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: var(--color-text-secondary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 4px;
+  border-radius: 4px;
+
+  &:hover {
+    color: var(--color-text-primary);
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--color-primary);
+    outline-offset: 2px;
+  }
+
+  .pi {
+    font-size: 1.05rem;
+  }
+}

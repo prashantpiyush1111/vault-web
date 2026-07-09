@@ -66,6 +66,8 @@ export class PasswordManagerComponent implements OnInit {
 
   createPasswordVisible = false;
   confirmPasswordVisible = false;
+  showSetupMasterPassword = false;
+  showUnlockMasterPassword = false;
 
   constructor(
     private fb: FormBuilder,

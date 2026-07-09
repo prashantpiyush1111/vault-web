@@ -57,6 +57,11 @@ export class DashboardComponent implements OnInit {
   pictureSuccess = '';
   pictureError = '';
 
+  // ── Password Visibility State ───────────────────────────────────────────
+  showCurrentPassword = false;
+  showNewPassword = false;
+  showConfirmPassword = false;
+
   constructor(
     private dashboardService: DashboardService,
     private fb: FormBuilder,
