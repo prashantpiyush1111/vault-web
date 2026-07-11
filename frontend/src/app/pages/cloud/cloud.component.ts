@@ -816,7 +816,10 @@ export class CloudComponent implements OnInit {
     if (!this.isMarkdownFile(this.newFileName)) return;
     const rawMarkdown = this.fileContent || '';
     try {
-      const dirtyHtml = marked.parse(rawMarkdown) as string;
+      // marked runs synchronously here, so the result is always a string.
+      const dirtyHtml = marked.parse(rawMarkdown, { async: false });
+      // DOMPurify strips any XSS payload; only then do we tell Angular the
+      // string is safe, so the bypass never sees unsanitized HTML.
       const cleanHtml = DOMPurify.sanitize(dirtyHtml);
       this.previewHtml = this.sanitizer.bypassSecurityTrustHtml(cleanHtml);
     } catch (e) {
