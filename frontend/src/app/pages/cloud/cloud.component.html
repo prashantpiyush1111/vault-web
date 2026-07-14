@@ -18,6 +18,15 @@
     </div>
     <div class="cloud-headline-actions">
       <p-button
+        label="Scan"
+        icon="pi pi-shield"
+        [outlined]="true"
+        styleClass="p-button-sm cloud-accent-btn text-xxs sm:text-xs"
+        pTooltip="Scan this folder for viruses"
+        tooltipPosition="bottom"
+        (click)="scanCurrentFolder()"
+      ></p-button>
+      <p-button
         label="Trash"
         icon="pi pi-trash"
         [outlined]="true"
@@ -470,6 +479,157 @@
         icon="pi pi-check"
         styleClass="p-button-sm text-xxs sm:text-xs"
         (click)="renameFile()"
+      ></p-button>
+    </ng-template>
+  </p-dialog>
+
+  <p-dialog
+    [(visible)]="showScanDialog"
+    (onHide)="onScanDialogHide()"
+    [modal]="true"
+    [closable]="true"
+    [draggable]="false"
+    [resizable]="false"
+    header="Virus scan"
+    styleClass="cloud-dialog"
+    [style]="{ width: '34rem', maxWidth: '95vw' }"
+  >
+    <div class="cloud-scan-body">
+      <p class="cloud-scan-target text-xxs sm:text-xs">
+        Scanning <strong>{{ scanFolderLabel }}</strong>
+      </p>
+
+      <!-- Failed to even start (rate limit, bad request, network) -->
+      <div *ngIf="scanError" class="cloud-scan-state cloud-scan-state--error">
+        <i class="pi pi-exclamation-triangle"></i>
+        <span class="text-xxs sm:text-xs">{{ scanError }}</span>
+      </div>
+
+      <ng-container *ngIf="!scanError && scanJob as job">
+        <!-- Running / pending: indeterminate progress + live counters -->
+        <div
+          *ngIf="scanning"
+          class="cloud-scan-state cloud-scan-state--running"
+        >
+          <i class="pi pi-spin pi-spinner"></i>
+          <div class="cloud-scan-running-text">
+            <span class="cloud-scan-status text-xxs sm:text-xs">{{
+              job.status === "PENDING" ? "Queued…" : "Scanning…"
+            }}</span>
+            <span class="cloud-scan-counters text-xxs">
+              {{ job.filesScanned }} file{{
+                job.filesScanned === 1 ? "" : "s"
+              }}
+              scanned · {{ job.infectedCount }} infected
+            </span>
+          </div>
+        </div>
+
+        <!-- Terminal: FAILED -->
+        <div
+          *ngIf="!scanning && job.status === 'FAILED'"
+          class="cloud-scan-state cloud-scan-state--error"
+        >
+          <i class="pi pi-times-circle"></i>
+          <span class="text-xxs sm:text-xs">{{
+            job.error || "The scan failed to complete."
+          }}</span>
+        </div>
+
+        <!-- Terminal: COMPLETED but scanner disabled/unavailable -->
+        <div
+          *ngIf="!scanning && scanScannerUnavailable"
+          class="cloud-scan-state cloud-scan-state--warn"
+        >
+          <i class="pi pi-info-circle"></i>
+          <span class="text-xxs sm:text-xs">{{ scanUnavailableMessage }}</span>
+        </div>
+
+        <!-- Terminal: COMPLETED, scanned, no threats -->
+        <div
+          *ngIf="!scanning && scanNoThreats"
+          class="cloud-scan-state cloud-scan-state--clean"
+        >
+          <i class="pi pi-verified"></i>
+          <div class="cloud-scan-running-text">
+            <span class="text-xxs sm:text-xs">No threats found.</span>
+            <span class="cloud-scan-counters text-xxs"
+              >{{ job.filesScanned }} file{{
+                job.filesScanned === 1 ? "" : "s"
+              }}
+              scanned.</span
+            >
+          </div>
+        </div>
+
+        <!-- Terminal: COMPLETED with infected findings -->
+        <div
+          *ngIf="
+            !scanning && job.status === 'COMPLETED' && job.infectedCount > 0
+          "
+          class="cloud-scan-findings"
+        >
+          <div class="cloud-scan-state cloud-scan-state--infected">
+            <i class="pi pi-exclamation-circle"></i>
+            <span class="text-xxs sm:text-xs">
+              {{ job.infectedCount }} infected file{{
+                job.infectedCount === 1 ? "" : "s"
+              }}
+              found out of {{ job.filesScanned }} scanned.
+            </span>
+          </div>
+          <ul class="cloud-scan-list">
+            <li *ngFor="let finding of scanInfectedFindings">
+              <span class="cloud-scan-file text-xxs sm:text-xs">{{
+                finding.path
+              }}</span>
+              <span class="cloud-scan-threat text-xxs">{{
+                finding.detail || "Threat detected"
+              }}</span>
+            </li>
+          </ul>
+        </div>
+
+        <!-- Files that could not be scanned (shown unless the scanner was
+             entirely unavailable, which is reported separately above) -->
+        <div
+          *ngIf="
+            !scanning && !scanScannerUnavailable && scanErroredFindings.length
+          "
+          class="cloud-scan-findings"
+        >
+          <p class="cloud-scan-subhead text-xxs">
+            {{ scanErroredFindings.length }} file{{
+              scanErroredFindings.length === 1 ? "" : "s"
+            }}
+            could not be scanned
+          </p>
+          <ul class="cloud-scan-list">
+            <li *ngFor="let finding of scanErroredFindings">
+              <span class="cloud-scan-file text-xxs sm:text-xs">{{
+                finding.path
+              }}</span>
+              <span class="cloud-scan-threat text-xxs">{{
+                finding.detail || "Could not scan"
+              }}</span>
+            </li>
+          </ul>
+        </div>
+      </ng-container>
+    </div>
+
+    <ng-template pTemplate="footer">
+      <p-button
+        label="Close"
+        styleClass="p-button-text p-button-sm text-xxs sm:text-xs"
+        (click)="showScanDialog = false"
+      ></p-button>
+      <p-button
+        label="Scan again"
+        icon="pi pi-refresh"
+        styleClass="p-button-sm text-xxs sm:text-xs"
+        [disabled]="scanning"
+        (click)="scanCurrentFolder()"
       ></p-button>
     </ng-template>
   </p-dialog>

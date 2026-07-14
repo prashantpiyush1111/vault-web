@@ -6,6 +6,7 @@ import { FolderContentItemDto } from '../models/dtos/FolderContentItemDto';
 import { PageResponseDto } from '../models/dtos/PageResponseDto';
 import { TrashEntryDto } from '../models/dtos/TrashEntryDto';
 import { SearchResultDto } from '../models/dtos/SearchResultDto';
+import { ScanJobDto } from '../models/dtos/ScanJobDto';
 import { environment } from '../../environments/environment';
 
 @Injectable({
@@ -166,6 +167,23 @@ export class CloudService {
   purgeTrashEntry(id: string): Observable<void> {
     return this.http.delete<void>(
       `${this.apiUrl}/files/trash/${encodeURIComponent(id)}`,
+    );
+  }
+
+  startFolderScan(relativePath?: string): Observable<ScanJobDto> {
+    // The backend treats a blank path as "scan the whole root", so the folder
+    // root ('/') is sent as an empty value rather than a literal slash.
+    const path =
+      !relativePath || relativePath === '/' ? '' : relativePath.trim();
+    const params = new HttpParams().set('path', path);
+    return this.http.post<ScanJobDto>(`${this.apiUrl}/files/scan`, null, {
+      params,
+    });
+  }
+
+  getScanJob(jobId: string): Observable<ScanJobDto> {
+    return this.http.get<ScanJobDto>(
+      `${this.apiUrl}/files/scan/${encodeURIComponent(jobId)}`,
     );
   }
 }
