@@ -1,11 +1,16 @@
 package vaultWeb.services;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
@@ -49,7 +54,8 @@ class DashboardServiceTest {
     GroupMemberCount secondCount = memberCount(20L, 7L);
 
     when(groupMemberRepository.findAllByUser(user)).thenReturn(memberships);
-    when(groupMemberRepository.countMembersByGroupIds(List.of(10L, 20L)))
+    when(groupMemberRepository.countMembersByGroupIds(
+            argThat(groupIds -> Set.copyOf(groupIds).equals(Set.of(10L, 20L)))))
         .thenReturn(List.of(firstCount, secondCount));
     when(privateChatRepository.findByUser1OrUser2(user, user)).thenReturn(List.of());
     when(pollRepository.findByGroupIdIn(List.of(10L, 20L))).thenReturn(List.of());
@@ -57,9 +63,13 @@ class DashboardServiceTest {
 
     UserDashboardDto dashboard = dashboardService.buildDashboard(user);
 
-    assertEquals(4, dashboard.groups().get(0).memberCount());
-    assertEquals(7, dashboard.groups().get(1).memberCount());
-    verify(groupMemberRepository).countMembersByGroupIds(List.of(10L, 20L));
+    Map<Long, UserDashboardDto.GroupSummary> groupsById =
+        dashboard.groups().stream()
+            .collect(Collectors.toMap(UserDashboardDto.GroupSummary::id, Function.identity()));
+    assertEquals(4, groupsById.get(10L).memberCount());
+    assertEquals(7, groupsById.get(20L).memberCount());
+    verify(groupMemberRepository)
+        .countMembersByGroupIds(argThat(groupIds -> Set.copyOf(groupIds).equals(Set.of(10L, 20L))));
   }
 
   @Test

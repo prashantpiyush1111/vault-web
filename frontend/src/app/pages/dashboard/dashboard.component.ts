@@ -9,6 +9,7 @@ import {
   Validators,
 } from '@angular/forms';
 import { Router } from '@angular/router';
+import { Subject, takeUntil } from 'rxjs';
 import { DashboardService } from '../../services/dashboard.service';
 import { UserDashboardDto } from '../../models/dtos/UserDashboardDto';
 import { AuthService } from '../../services/auth.service';
@@ -55,6 +56,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
   pictureSuccess = '';
   pictureError = '';
   private pictureSuccessTimer: ReturnType<typeof setTimeout> | null = null;
+  private readonly destroy$ = new Subject<void>();
 
   // ── Password Visibility State ───────────────────────────────────────────
   showCurrentPassword = false;
@@ -76,6 +78,8 @@ export class DashboardComponent implements OnInit, OnDestroy {
   }
 
   ngOnDestroy(): void {
+    this.destroy$.next();
+    this.destroy$.complete();
     this.clearPictureSuccessTimer();
   }
 
@@ -205,24 +209,27 @@ export class DashboardComponent implements OnInit, OnDestroy {
     }
 
     this.isSavingPassword = true;
-    this.authService.changePassword(currentPassword, newPassword).subscribe({
-      next: () => {
-        this.isSavingPassword = false;
-        this.passwordSuccess = 'Password updated successfully.';
-        this.passwordForm.reset();
-        this.passwordForm.markAsPristine();
-        this.passwordForm.markAsUntouched();
-      },
-      error: (error) => {
-        this.isSavingPassword = false;
-        const serverMessage =
-          typeof error?.error === 'string'
-            ? error.error
-            : error?.error?.message;
-        this.passwordError =
-          serverMessage || 'Update failed. Please try again.';
-      },
-    });
+    this.authService
+      .changePassword(currentPassword, newPassword)
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: () => {
+          this.isSavingPassword = false;
+          this.passwordSuccess = 'Password updated successfully.';
+          this.passwordForm.reset();
+          this.passwordForm.markAsPristine();
+          this.passwordForm.markAsUntouched();
+        },
+        error: (error) => {
+          this.isSavingPassword = false;
+          const serverMessage =
+            typeof error?.error === 'string'
+              ? error.error
+              : error?.error?.message;
+          this.passwordError =
+            serverMessage || 'Update failed. Please try again.';
+        },
+      });
   }
 
   isDeadlineActive(deadline: string | null): boolean {
@@ -248,21 +255,24 @@ export class DashboardComponent implements OnInit, OnDestroy {
     this.pictureError = '';
     this.isUploadingPicture = true;
 
-    this.userService.uploadProfilePicture(file).subscribe({
-      next: (res) => {
-        this.profilePictureUrl = this.userService.getProfilePictureUrl(
-          res.profilePicture,
-        );
-        this.isUploadingPicture = false;
-        this.pictureSuccess = 'Profile picture updated successfully!';
-        this.schedulePictureSuccessReset();
-      },
-      error: (err) => {
-        this.isUploadingPicture = false;
-        this.pictureError =
-          err?.error?.message || 'Upload failed. Please try again.';
-      },
-    });
+    this.userService
+      .uploadProfilePicture(file)
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: (res) => {
+          this.profilePictureUrl = this.userService.getProfilePictureUrl(
+            res.profilePicture,
+          );
+          this.isUploadingPicture = false;
+          this.pictureSuccess = 'Profile picture updated successfully!';
+          this.schedulePictureSuccessReset();
+        },
+        error: (err) => {
+          this.isUploadingPicture = false;
+          this.pictureError =
+            err?.error?.message || 'Upload failed. Please try again.';
+        },
+      });
   }
 
   /**
@@ -273,18 +283,21 @@ export class DashboardComponent implements OnInit, OnDestroy {
     this.pictureError = '';
     this.isUploadingPicture = true;
 
-    this.userService.deleteProfilePicture().subscribe({
-      next: () => {
-        this.profilePictureUrl = null;
-        this.isUploadingPicture = false;
-        this.pictureSuccess = 'Profile picture removed.';
-        this.schedulePictureSuccessReset();
-      },
-      error: () => {
-        this.isUploadingPicture = false;
-        this.pictureError = 'Could not remove the picture. Please try again.';
-      },
-    });
+    this.userService
+      .deleteProfilePicture()
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: () => {
+          this.profilePictureUrl = null;
+          this.isUploadingPicture = false;
+          this.pictureSuccess = 'Profile picture removed.';
+          this.schedulePictureSuccessReset();
+        },
+        error: () => {
+          this.isUploadingPicture = false;
+          this.pictureError = 'Could not remove the picture. Please try again.';
+        },
+      });
   }
 
   private loadDashboard(isRetry = false): void {
@@ -293,27 +306,30 @@ export class DashboardComponent implements OnInit, OnDestroy {
       this.error = null;
     }
 
-    this.dashboardService.getDashboard().subscribe({
-      next: (data) => {
-        this.dashboard = data;
-        this.profilePictureUrl = this.userService.getProfilePictureUrl(
-          data.profile.profilePicture,
-        );
-        this.privateChatParticipants = new Map(
-          data.privateChats.map((chat) => [chat.id, chat.participant]),
-        );
-        this.groupsById = new Map(
-          data.groups.map((group) => [group.id, group]),
-        );
-        this.isLoading = false;
-        this.error = null;
-        this.buildHighlights(data);
-      },
-      error: () => {
-        this.isLoading = false;
-        this.error = 'Failed to load the dashboard.';
-      },
-    });
+    this.dashboardService
+      .getDashboard()
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: (data) => {
+          this.dashboard = data;
+          this.profilePictureUrl = this.userService.getProfilePictureUrl(
+            data.profile.profilePicture,
+          );
+          this.privateChatParticipants = new Map(
+            data.privateChats.map((chat) => [chat.id, chat.participant]),
+          );
+          this.groupsById = new Map(
+            data.groups.map((group) => [group.id, group]),
+          );
+          this.isLoading = false;
+          this.error = null;
+          this.buildHighlights(data);
+        },
+        error: () => {
+          this.isLoading = false;
+          this.error = 'Failed to load the dashboard.';
+        },
+      });
   }
 
   private schedulePictureSuccessReset(): void {

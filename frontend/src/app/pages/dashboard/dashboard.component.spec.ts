@@ -1,6 +1,6 @@
 import { fakeAsync, tick } from '@angular/core/testing';
 import { FormBuilder } from '@angular/forms';
-import { of } from 'rxjs';
+import { of, Subject } from 'rxjs';
 import { UserDashboardDto } from '../../models/dtos/UserDashboardDto';
 import { AuthService } from '../../services/auth.service';
 import { DashboardService } from '../../services/dashboard.service';
@@ -78,5 +78,18 @@ describe('DashboardComponent', () => {
     tick(4000);
 
     expect(component.pictureSuccess).toBe('Profile picture removed.');
+  }));
+
+  it('ignores a profile-picture response received after destroy', fakeAsync(() => {
+    const deleteResult = new Subject<void>();
+    userService.deleteProfilePicture.and.returnValue(deleteResult);
+
+    component.removeProfilePicture();
+    component.ngOnDestroy();
+    deleteResult.next();
+    deleteResult.complete();
+    tick(4000);
+
+    expect(component.pictureSuccess).toBe('');
   }));
 });
