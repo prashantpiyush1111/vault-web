@@ -5,6 +5,7 @@ import { ConfirmationService } from 'primeng/api';
 import { ButtonModule } from 'primeng/button';
 import { ConfirmDialogModule } from 'primeng/confirmdialog';
 import { TableModule } from 'primeng/table';
+import { TooltipModule } from 'primeng/tooltip';
 import { finalize } from 'rxjs';
 import { TrashEntryDto } from '../../../models/dtos/TrashEntryDto';
 import { CloudService } from '../../../services/cloud.service';
@@ -13,7 +14,13 @@ import { UiToastService } from '../../../core/services/ui-toast.service';
 @Component({
   selector: 'app-trash',
   standalone: true,
-  imports: [CommonModule, TableModule, ButtonModule, ConfirmDialogModule],
+  imports: [
+    CommonModule,
+    TableModule,
+    ButtonModule,
+    ConfirmDialogModule,
+    TooltipModule,
+  ],
   providers: [ConfirmationService],
   templateUrl: './trash.component.html',
   styleUrls: ['./trash.component.scss'],

@@ -66,6 +66,8 @@
                 [loading]="isProcessing(entry.id)"
                 [disabled]="isProcessing(entry.id)"
                 (click)="restore(entry)"
+                pTooltip="Restore to original location"
+                tooltipPosition="top"
               ></p-button>
               <p-button
                 icon="pi pi-trash"
@@ -74,6 +76,8 @@
                 styleClass="p-button-rounded p-button-text p-button-sm"
                 [disabled]="isProcessing(entry.id)"
                 (click)="confirmPurge(entry)"
+                pTooltip="Delete permanently"
+                tooltipPosition="top"
               ></p-button>
             </div>
           </td>
