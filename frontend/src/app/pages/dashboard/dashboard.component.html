@@ -66,6 +66,9 @@
               *ngIf="profilePictureUrl; else dashboardInitial"
               [src]="profilePictureUrl"
               alt="Your profile picture"
+              width="88"
+              height="88"
+              loading="lazy"
               style="width: 100%; height: 100%; object-fit: cover"
             />
             <ng-template #dashboardInitial>
@@ -267,10 +270,7 @@
             <ul class="timeline" *ngIf="data.recentMessages.length">
               <li
                 class="timeline-entry"
-                *ngFor="
-                  let message of recentMessagesLimited;
-                  trackBy: trackById
-                "
+                *ngFor="let message of data.recentMessages; trackBy: trackById"
                 [class.timeline-entry-clickable]="canOpenRecentMessage(message)"
                 [attr.role]="canOpenRecentMessage(message) ? 'button' : null"
                 [attr.tabindex]="canOpenRecentMessage(message) ? 0 : -1"
@@ -292,9 +292,6 @@
               </li>
             </ul>
           </div>
-          <p class="timeline-overflow-note" *ngIf="hasMoreRecentMessages">
-            {{ hiddenRecentMessagesCount }} older message(s) hidden.
-          </p>
         </section>
       </div>
 

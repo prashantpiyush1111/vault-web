@@ -24,6 +24,7 @@ import vaultWeb.models.PrivateChat;
 import vaultWeb.models.User;
 import vaultWeb.repositories.ChatMessageRepository;
 import vaultWeb.repositories.GroupMemberRepository;
+import vaultWeb.repositories.GroupMemberRepository.GroupMemberCount;
 import vaultWeb.repositories.PollRepository;
 import vaultWeb.repositories.PrivateChatRepository;
 
@@ -66,6 +67,14 @@ public class DashboardService {
     List<Long> groupIds =
         memberships.stream().map(membership -> membership.getGroup().getId()).distinct().toList();
 
+    Map<Long, Long> memberCountsByGroup =
+        groupIds.isEmpty()
+            ? Map.of()
+            : groupMemberRepository.countMembersByGroupIds(groupIds).stream()
+                .collect(
+                    Collectors.toMap(
+                        GroupMemberCount::getGroupId, GroupMemberCount::getMemberCount));
+
     List<Poll> polls = groupIds.isEmpty() ? List.of() : pollRepository.findByGroupIdIn(groupIds);
     Map<Long, List<Poll>> pollsByGroup =
         polls.stream().collect(Collectors.groupingBy(poll -> poll.getGroup().getId()));
@@ -73,7 +82,8 @@ public class DashboardService {
     long messageCount = chatMessageRepository.countBySender(user);
     List<MessagePreview> recentMessages = buildRecentMessages(user);
 
-    List<GroupSummary> groupSummaries = buildGroupSummaries(memberships, pollsByGroup);
+    List<GroupSummary> groupSummaries =
+        buildGroupSummaries(memberships, pollsByGroup, memberCountsByGroup);
     List<PrivateChatSummary> privateChatSummaries = buildPrivateChatSummaries(privateChats, user);
     List<PollSummary> pollSummaries = buildPollSummaries(polls);
 
@@ -92,12 +102,14 @@ public class DashboardService {
   }
 
   private List<GroupSummary> buildGroupSummaries(
-      List<GroupMember> memberships, Map<Long, List<Poll>> pollsByGroup) {
+      List<GroupMember> memberships,
+      Map<Long, List<Poll>> pollsByGroup,
+      Map<Long, Long> memberCountsByGroup) {
     return memberships.stream()
         .map(
             membership -> {
               Group group = membership.getGroup();
-              long memberCount = groupMemberRepository.countByGroup(group);
+              long memberCount = memberCountsByGroup.getOrDefault(group.getId(), 0L);
               int pollCount = pollsByGroup.getOrDefault(group.getId(), List.of()).size();
               return new GroupSummary(
                   group.getId(),
