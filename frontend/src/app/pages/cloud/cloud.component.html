@@ -212,9 +212,10 @@
                 [loading]="isDownloading(entry.path)"
                 [disabled]="isDownloading(entry.path)"
                 (click)="downloadFileByPath(entry.path, entry.name)"
-                pTooltip="Download"
+                pTooltip="Download file"
                 tooltipPosition="top"
                 ariaLabel="Download file"
+                aria-label="Download file"
               ></p-button>
               <p-button
                 icon="pi pi-pencil"
@@ -224,8 +225,13 @@
                     ? openRenameFolderDialog(entry.path, entry.name)
                     : onEditAction(entry.path, entry.name)
                 "
-                [pTooltip]="entry.kind === 'folder' ? 'Rename' : 'Edit'"
+                [pTooltip]="
+                  entry.kind === 'folder' ? 'Rename folder' : 'Edit file'
+                "
                 tooltipPosition="top"
+                [ariaLabel]="
+                  entry.kind === 'folder' ? 'Rename folder' : 'Edit file'
+                "
                 [attr.aria-label]="
                   entry.kind === 'folder' ? 'Rename folder' : 'Edit file'
                 "
@@ -239,8 +245,13 @@
                     ? confirmDeleteFolder(entry.path)
                     : confirmDeleteFile(entry.path)
                 "
-                pTooltip="Delete"
+                [pTooltip]="
+                  entry.kind === 'folder' ? 'Delete folder' : 'Delete file'
+                "
                 tooltipPosition="top"
+                [ariaLabel]="
+                  entry.kind === 'folder' ? 'Delete folder' : 'Delete file'
+                "
                 [attr.aria-label]="
                   entry.kind === 'folder' ? 'Delete folder' : 'Delete file'
                 "
