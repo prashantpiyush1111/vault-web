@@ -215,7 +215,6 @@
                 pTooltip="Download file"
                 tooltipPosition="top"
                 ariaLabel="Download file"
-                aria-label="Download file"
               ></p-button>
               <p-button
                 icon="pi pi-pencil"
@@ -230,9 +229,6 @@
                 "
                 tooltipPosition="top"
                 [ariaLabel]="
-                  entry.kind === 'folder' ? 'Rename folder' : 'Edit file'
-                "
-                [attr.aria-label]="
                   entry.kind === 'folder' ? 'Rename folder' : 'Edit file'
                 "
               ></p-button>
@@ -250,9 +246,6 @@
                 "
                 tooltipPosition="top"
                 [ariaLabel]="
-                  entry.kind === 'folder' ? 'Delete folder' : 'Delete file'
-                "
-                [attr.aria-label]="
                   entry.kind === 'folder' ? 'Delete folder' : 'Delete file'
                 "
               ></p-button>
