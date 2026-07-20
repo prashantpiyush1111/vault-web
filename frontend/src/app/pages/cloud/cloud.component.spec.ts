@@ -168,6 +168,41 @@ describe('CloudComponent virus scan', () => {
     expect(cloudMock.getScanJob).not.toHaveBeenCalled();
   });
 
+  it('keeps the scan alive when polling is rate limited, and still completes', () => {
+    cloudMock.startFolderScan.and.returnValue(of({ ...runningJob }));
+    // throttled once, then the backend lets us through again
+    cloudMock.getScanJob.and.returnValues(
+      throwError(() => ({ status: 429 })),
+      of({ ...runningJob, status: 'COMPLETED', findings: [] }),
+    );
+
+    component.scanCurrentFolder();
+    jasmine.clock().tick(1200); // first poll -> 429
+
+    // a throttled poll says nothing about the scan: it must not be reported as
+    // failed, and the dialog must stay in its running state
+    expect(component.scanning).toBeTrue();
+    expect(component.scanError).toBeUndefined();
+
+    jasmine.clock().tick(5000); // backoff elapses -> poll succeeds
+    expect(component.scanning).toBeFalse();
+    expect(component.scanError).toBeUndefined();
+    expect(component.scanJob?.status).toBe('COMPLETED');
+  });
+
+  it('gives up on a persistently rate-limited scan without claiming it failed', () => {
+    cloudMock.startFolderScan.and.returnValue(of({ ...runningJob }));
+    cloudMock.getScanJob.and.returnValue(throwError(() => ({ status: 429 })));
+
+    component.scanCurrentFolder();
+    jasmine.clock().tick(1200); // first poll
+    jasmine.clock().tick(5000 * 5); // exhaust the retries
+
+    expect(component.scanning).toBeFalse();
+    expect(component.scanError).toContain('may still be running');
+    expect(cloudMock.getScanJob).toHaveBeenCalledTimes(6); // initial + 5 retries
+  });
+
   it('handles an expired job (404) during polling', () => {
     cloudMock.startFolderScan.and.returnValue(of({ ...runningJob }));
     cloudMock.getScanJob.and.returnValue(throwError(() => ({ status: 404 })));

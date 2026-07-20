@@ -118,6 +118,12 @@ export class CloudComponent implements OnInit, OnDestroy {
   private scanJobId?: string;
   private scanPollHandle?: ReturnType<typeof setTimeout>;
   private readonly scanPollIntervalMs = 1200;
+  // A 429 while polling means we asked too often, not that the scan died — it
+  // keeps running on the server. Back off and keep waiting instead of tearing
+  // the dialog down, giving up only if the backend stays rate limited.
+  private scanRateLimitedPolls = 0;
+  private readonly maxRateLimitedPolls = 5;
+  private readonly scanRateLimitBackoffMs = 5000;
   // Bumped whenever a scan starts or the dialog closes; in-flight start/poll
   // callbacks compare against it and bail if they've been superseded (mirrors
   // the contentRequestId guard used for folder loads/searches).
@@ -416,6 +422,7 @@ export class CloudComponent implements OnInit, OnDestroy {
     this.showScanDialog = true;
     this.scanJob = undefined;
     this.scanError = undefined;
+    this.scanRateLimitedPolls = 0;
     this.scanning = true;
 
     const relativePath = this.getRelativePath(folder?.path || this.rootPath);
@@ -439,7 +446,7 @@ export class CloudComponent implements OnInit, OnDestroy {
     });
   }
 
-  private pollScanJob(runId: number): void {
+  private pollScanJob(runId: number, delayMs = this.scanPollIntervalMs): void {
     this.scanPollHandle = setTimeout(() => {
       if (runId !== this.scanRunId) return;
       const jobId = this.scanJobId;
@@ -447,6 +454,7 @@ export class CloudComponent implements OnInit, OnDestroy {
       this.cloudService.getScanJob(jobId).subscribe({
         next: (job) => {
           if (runId !== this.scanRunId) return;
+          this.scanRateLimitedPolls = 0;
           this.scanJob = job;
           if (this.isTerminalScan(job.status)) {
             this.scanning = false;
@@ -456,11 +464,23 @@ export class CloudComponent implements OnInit, OnDestroy {
         },
         error: (err) => {
           if (runId !== this.scanRunId) return;
+          const status = (err as { status?: number })?.status;
+          if (status === 429 && this.canRetryRateLimitedPoll()) {
+            // The scan is untouched by our polling being throttled: wait longer
+            // and ask again rather than reporting a failure that didn't happen.
+            this.pollScanJob(runId, this.scanRateLimitBackoffMs);
+            return;
+          }
           this.scanning = false;
           this.scanError = this.scanPollErrorMessage(err);
         },
       });
-    }, this.scanPollIntervalMs);
+    }, delayMs);
+  }
+
+  private canRetryRateLimitedPoll(): boolean {
+    this.scanRateLimitedPolls++;
+    return this.scanRateLimitedPolls <= this.maxRateLimitedPolls;
   }
 
   onScanDialogHide(): void {
@@ -486,6 +506,11 @@ export class CloudComponent implements OnInit, OnDestroy {
     const status = (err as { status?: number })?.status;
     if (status === 404) {
       return 'This scan is no longer available. Start a new scan to see results.';
+    }
+    if (status === 429) {
+      // Only reached once the backoff above is exhausted; the scan itself may
+      // well still be running, so don't tell the user it failed.
+      return 'The server is busy, so we stopped checking on this scan. It may still be running — reopen the scan in a moment.';
     }
     return 'Lost track of the scan. Please try again.';
   }
