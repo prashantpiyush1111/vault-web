@@ -1,15 +1,17 @@
+import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { HttpClientTestingModule } from '@angular/common/http/testing';
+import { RouterTestingModule } from '@angular/router/testing';
+import { NoopAnimationsModule } from '@angular/platform-browser/animations';
 import { of, throwError, Subject } from 'rxjs';
 import { CloudComponent } from './cloud.component';
 import { CloudService } from '../../services/cloud.service';
+import { UiToastService } from '../../core/services/ui-toast.service';
 import { ScanJobDto } from '../../models/dtos/ScanJobDto';
+import { SecureSendLinkDto } from '../../models/dtos/SecureSendLinkDto';
 
 /**
  * Exercises the folder virus-scan state machine end to end with a mocked
- * CloudService and Jasmine's fake clock driving the poll timer. Covers the
- * running/completed transitions, disabled/unreachable-scanner detection, the
- * clean result, rate-limit and expired-job errors, and that polling stops on a
- * terminal status or when the dialog closes (including a close that races the
- * initial start request).
+ * CloudService and Jasmine's fake clock driving the poll timer.
  */
 describe('CloudComponent virus scan', () => {
   let component: CloudComponent;
@@ -179,8 +181,6 @@ describe('CloudComponent virus scan', () => {
     component.scanCurrentFolder();
     jasmine.clock().tick(1200); // first poll -> 429
 
-    // a throttled poll says nothing about the scan: it must not be reported as
-    // failed, and the dialog must stay in its running state
     expect(component.scanning).toBeTrue();
     expect(component.scanError).toBeUndefined();
 
@@ -240,5 +240,151 @@ describe('CloudComponent virus scan', () => {
     jasmine.clock().tick(6000);
 
     expect(cloudMock.getScanJob).not.toHaveBeenCalled();
+  });
+});
+
+describe('CloudComponent Secure Send Flow', () => {
+  let component: CloudComponent;
+  let fixture: ComponentFixture<CloudComponent>;
+  let cloudServiceSpy: jasmine.SpyObj<CloudService>;
+  let toastSpy: jasmine.SpyObj<UiToastService>;
+
+  beforeEach(async () => {
+    cloudServiceSpy = jasmine.createSpyObj('CloudService', [
+      'getRootFolder',
+      'getFolderByPath',
+      'getFolderContent',
+      'createSecureSendLink',
+      'listSecureSendLinks',
+      'revokeSecureSendLink',
+    ]);
+
+    cloudServiceSpy.getRootFolder.and.returnValue(
+      of({ id: 'root', name: 'Root', path: '/' } as any),
+    );
+    cloudServiceSpy.getFolderContent.and.returnValue(
+      of({ content: [], totalElements: 0, totalPages: 0, page: 0 } as any),
+    );
+
+    toastSpy = jasmine.createSpyObj('UiToastService', [
+      'success',
+      'error',
+      'info',
+      'warn',
+    ]);
+
+    await TestBed.configureTestingModule({
+      imports: [
+        CloudComponent,
+        HttpClientTestingModule,
+        RouterTestingModule,
+        NoopAnimationsModule,
+      ],
+      providers: [
+        { provide: CloudService, useValue: cloudServiceSpy },
+        { provide: UiToastService, useValue: toastSpy },
+      ],
+    }).compileComponents();
+
+    fixture = TestBed.createComponent(CloudComponent);
+    component = fixture.componentInstance;
+    fixture.detectChanges();
+  });
+
+  it('should open create share link dialog for a file', () => {
+    component.openCreateShareDialog('/file.txt', 'file.txt');
+    expect(component.selectedFileForShare).toEqual({
+      path: '/file.txt',
+      name: 'file.txt',
+    });
+    expect(component.showCreateShareDialog).toBeTrue();
+    expect(component.shareExpiryMinutes).toBe(1440);
+  });
+
+  it('should create a secure send link and open generated URL dialog on success', () => {
+    component.selectedFileForShare = { path: '/doc.pdf', name: 'doc.pdf' };
+    component.shareExpiryMinutes = 60;
+    component.sharePassword = 'pass';
+
+    const mockLink: SecureSendLinkDto = {
+      id: 's1',
+      filePath: '/doc.pdf',
+      fileName: 'doc.pdf',
+      shareUrl: 'http://localhost/share/s1',
+      expiresAt: '2026-07-21T00:00:00Z',
+      createdAt: '2026-07-20T00:00:00Z',
+    };
+
+    cloudServiceSpy.createSecureSendLink.and.returnValue(of(mockLink));
+
+    component.submitCreateShareLink();
+
+    expect(cloudServiceSpy.createSecureSendLink).toHaveBeenCalledWith(
+      '/doc.pdf',
+      60,
+      'pass',
+    );
+    expect(component.createdShareUrl).toBe('http://localhost/share/s1');
+    expect(component.showCreateShareDialog).toBeFalse();
+    expect(component.showGeneratedLinkDialog).toBeTrue();
+    expect(toastSpy.success).toHaveBeenCalledWith(
+      'Share link created',
+      'Link for "doc.pdf" created successfully.',
+    );
+  });
+
+  it('should handle rate limit error (HTTP 429) when creating share link', () => {
+    component.selectedFileForShare = { path: '/doc.pdf', name: 'doc.pdf' };
+    cloudServiceSpy.createSecureSendLink.and.returnValue(
+      throwError(() => ({ status: 429, message: 'Too Many Requests' })),
+    );
+
+    component.submitCreateShareLink();
+
+    expect(toastSpy.error).toHaveBeenCalledWith(
+      'Rate limit reached',
+      'Too many share links created. Please wait before trying again.',
+    );
+  });
+
+  it('should load active share links in dialog', () => {
+    const mockLinks: SecureSendLinkDto[] = [
+      {
+        id: 'link1',
+        filePath: '/a.txt',
+        fileName: 'a.txt',
+        expiresAt: '2026-07-25T00:00:00Z',
+        createdAt: '2026-07-20T00:00:00Z',
+      },
+    ];
+
+    cloudServiceSpy.listSecureSendLinks.and.returnValue(of(mockLinks));
+
+    component.openSharedLinksDialog();
+
+    expect(component.showSharedLinksDialog).toBeTrue();
+    expect(component.sharedLinks).toEqual(mockLinks);
+  });
+
+  it('should revoke a share link and update UI state', () => {
+    const link: SecureSendLinkDto = {
+      id: 'link1',
+      filePath: '/a.txt',
+      fileName: 'a.txt',
+      expiresAt: '2026-07-25T00:00:00Z',
+      createdAt: '2026-07-20T00:00:00Z',
+      isRevoked: false,
+    };
+
+    cloudServiceSpy.revokeSecureSendLink.and.returnValue(of(void 0));
+
+    component.revokeShareLink(link);
+
+    expect(cloudServiceSpy.revokeSecureSendLink).toHaveBeenCalledWith('link1');
+    expect(link.isRevoked).toBeTrue();
+    expect(toastSpy.success).toHaveBeenCalledWith(
+      'Link revoked',
+      'Share link for "a.txt" was revoked.',
+    );
   });
 });
