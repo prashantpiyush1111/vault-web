@@ -359,6 +359,122 @@
   gap: 0.35rem;
 }
 
+.cloud-scan-body {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.cloud-scan-target {
+  margin: 0;
+  color: var(--color-text-secondary);
+
+  strong {
+    color: var(--color-text-primary);
+    word-break: break-word;
+  }
+}
+
+.cloud-scan-state {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0.7rem 0.85rem;
+  border-radius: 0.55rem;
+  border: 1px solid var(--color-border);
+  background: var(--color-surface);
+  color: var(--color-text-primary);
+
+  i {
+    font-size: 1.1rem;
+    flex-shrink: 0;
+  }
+}
+
+.cloud-scan-running-text {
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+}
+
+.cloud-scan-counters {
+  color: var(--color-text-secondary);
+}
+
+.cloud-scan-state--running i {
+  color: var(--color-primary);
+}
+
+.cloud-scan-state--clean {
+  border-color: color-mix(in srgb, #10b981 45%, var(--color-border));
+  background: color-mix(in srgb, #10b981 10%, transparent);
+
+  i {
+    color: #059669;
+  }
+}
+
+.cloud-scan-state--warn {
+  border-color: color-mix(in srgb, #f59e0b 45%, var(--color-border));
+  background: color-mix(in srgb, #f59e0b 12%, transparent);
+
+  i {
+    color: #d97706;
+  }
+}
+
+.cloud-scan-state--error,
+.cloud-scan-state--infected {
+  border-color: color-mix(in srgb, #ef4444 45%, var(--color-border));
+  background: color-mix(in srgb, #ef4444 10%, transparent);
+
+  i {
+    color: #dc2626;
+  }
+}
+
+.cloud-scan-findings {
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+}
+
+.cloud-scan-subhead {
+  margin: 0;
+  color: var(--color-text-secondary);
+}
+
+.cloud-scan-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  max-height: 15rem;
+  overflow-y: auto;
+
+  li {
+    display: flex;
+    flex-direction: column;
+    gap: 0.1rem;
+    padding: 0.5rem 0.65rem;
+    border-radius: 0.45rem;
+    border: 1px solid var(--color-border);
+    background: var(--color-surface);
+  }
+}
+
+.cloud-scan-file {
+  color: var(--color-text-primary);
+  word-break: break-all;
+}
+
+.cloud-scan-threat {
+  color: var(--color-text-secondary);
+  word-break: break-word;
+}
+
 .cloud-editor {
   width: 100%;
   min-height: 14rem;

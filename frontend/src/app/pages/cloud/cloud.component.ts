@@ -1,5 +1,11 @@
 import { CommonModule } from '@angular/common';
-import { Component, ElementRef, OnInit, ViewChild } from '@angular/core';
+import {
+  Component,
+  ElementRef,
+  OnDestroy,
+  OnInit,
+  ViewChild,
+} from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
 import { DomSanitizer, SafeHtml } from '@angular/platform-browser';
@@ -20,6 +26,8 @@ import { FileDto } from '../../models/dtos/FileDto';
 import { FolderDto } from '../../models/dtos/FolderDto';
 import { FolderContentItemDto } from '../../models/dtos/FolderContentItemDto';
 import { SearchResultDto } from '../../models/dtos/SearchResultDto';
+import { ScanJobDto } from '../../models/dtos/ScanJobDto';
+import { FileScanResultDto } from '../../models/dtos/FileScanResultDto';
 import { CloudService } from '../../services/cloud.service';
 import { finalize, firstValueFrom } from 'rxjs';
 import { UiToastService } from '../../core/services/ui-toast.service';
@@ -66,7 +74,7 @@ type CloudSort =
   templateUrl: './cloud.component.html',
   styleUrls: ['./cloud.component.scss'],
 })
-export class CloudComponent implements OnInit {
+export class CloudComponent implements OnInit, OnDestroy {
   @ViewChild('fileUploadInput') fileUploadInput?: ElementRef<HTMLInputElement>;
 
   currentFolder?: FolderDto;
@@ -101,6 +109,25 @@ export class CloudComponent implements OnInit {
   searchQuery = '';
   searchActive = false;
   searching = false;
+
+  showScanDialog = false;
+  scanning = false;
+  scanJob?: ScanJobDto;
+  scanError?: string;
+  scanFolderLabel = '';
+  private scanJobId?: string;
+  private scanPollHandle?: ReturnType<typeof setTimeout>;
+  private readonly scanPollIntervalMs = 1200;
+  // A 429 while polling means we asked too often, not that the scan died — it
+  // keeps running on the server. Back off and keep waiting instead of tearing
+  // the dialog down, giving up only if the backend stays rate limited.
+  private scanRateLimitedPolls = 0;
+  private readonly maxRateLimitedPolls = 5;
+  private readonly scanRateLimitBackoffMs = 5000;
+  // Bumped whenever a scan starts or the dialog closes; in-flight start/poll
+  // callbacks compare against it and bail if they've been superseded (mirrors
+  // the contentRequestId guard used for folder loads/searches).
+  private scanRunId = 0;
 
   pageSize = 50;
   totalElements = 0;
@@ -363,6 +390,175 @@ export class CloudComponent implements OnInit {
 
   goToTrash() {
     this.router.navigate(['/cloud/trash']);
+  }
+
+  ngOnDestroy(): void {
+    // Invalidate in-flight callbacks and drop any pending poll timer.
+    this.scanRunId++;
+    this.stopScanPolling();
+  }
+
+  private stopScanPolling(): void {
+    if (this.scanPollHandle) {
+      clearTimeout(this.scanPollHandle);
+      this.scanPollHandle = undefined;
+    }
+    this.scanJobId = undefined;
+  }
+
+  private isTerminalScan(status: string): boolean {
+    return status === 'COMPLETED' || status === 'FAILED';
+  }
+
+  scanCurrentFolder(): void {
+    const folder = this.currentFolder;
+    this.scanFolderLabel =
+      folder && folder.path !== this.rootPath
+        ? this.getNameFromPath(folder.path)
+        : 'your Cloud folder';
+
+    this.stopScanPolling();
+    const runId = ++this.scanRunId;
+    this.showScanDialog = true;
+    this.scanJob = undefined;
+    this.scanError = undefined;
+    this.scanRateLimitedPolls = 0;
+    this.scanning = true;
+
+    const relativePath = this.getRelativePath(folder?.path || this.rootPath);
+    this.cloudService.startFolderScan(relativePath).subscribe({
+      next: (job) => {
+        // A closed dialog or a newer scan supersedes this start.
+        if (runId !== this.scanRunId) return;
+        this.scanJob = job;
+        this.scanJobId = job.jobId;
+        if (this.isTerminalScan(job.status)) {
+          this.scanning = false;
+        } else {
+          this.pollScanJob(runId);
+        }
+      },
+      error: (err) => {
+        if (runId !== this.scanRunId) return;
+        this.scanning = false;
+        this.scanError = this.scanStartErrorMessage(err);
+      },
+    });
+  }
+
+  private pollScanJob(runId: number, delayMs = this.scanPollIntervalMs): void {
+    this.scanPollHandle = setTimeout(() => {
+      if (runId !== this.scanRunId) return;
+      const jobId = this.scanJobId;
+      if (!jobId) return;
+      this.cloudService.getScanJob(jobId).subscribe({
+        next: (job) => {
+          if (runId !== this.scanRunId) return;
+          this.scanRateLimitedPolls = 0;
+          this.scanJob = job;
+          if (this.isTerminalScan(job.status)) {
+            this.scanning = false;
+          } else {
+            this.pollScanJob(runId);
+          }
+        },
+        error: (err) => {
+          if (runId !== this.scanRunId) return;
+          const status = (err as { status?: number })?.status;
+          if (status === 429 && this.canRetryRateLimitedPoll()) {
+            // The scan is untouched by our polling being throttled: wait longer
+            // and ask again rather than reporting a failure that didn't happen.
+            this.pollScanJob(runId, this.scanRateLimitBackoffMs);
+            return;
+          }
+          this.scanning = false;
+          this.scanError = this.scanPollErrorMessage(err);
+        },
+      });
+    }, delayMs);
+  }
+
+  private canRetryRateLimitedPoll(): boolean {
+    this.scanRateLimitedPolls++;
+    return this.scanRateLimitedPolls <= this.maxRateLimitedPolls;
+  }
+
+  onScanDialogHide(): void {
+    // Fired by the dialog on any close (footer button, header X, or ESC);
+    // invalidate the run so polling stops and late responses are ignored.
+    this.scanRunId++;
+    this.stopScanPolling();
+    this.scanning = false;
+  }
+
+  private scanStartErrorMessage(err: unknown): string {
+    const status = (err as { status?: number })?.status;
+    if (status === 429) {
+      return 'Too many scans were started recently. Please wait a moment and try again.';
+    }
+    if (status === 400) {
+      return this.getErrorMessage(err);
+    }
+    return 'Could not start the scan. Please try again.';
+  }
+
+  private scanPollErrorMessage(err: unknown): string {
+    const status = (err as { status?: number })?.status;
+    if (status === 404) {
+      return 'This scan is no longer available. Start a new scan to see results.';
+    }
+    if (status === 429) {
+      // Only reached once the backoff above is exhausted; the scan itself may
+      // well still be running, so don't tell the user it failed.
+      return 'The server is busy, so we stopped checking on this scan. It may still be running — reopen the scan in a moment.';
+    }
+    return 'Lost track of the scan. Please try again.';
+  }
+
+  get scanInfectedFindings(): FileScanResultDto[] {
+    return (this.scanJob?.findings ?? []).filter(
+      (f) => f.verdict === 'INFECTED',
+    );
+  }
+
+  get scanErroredFindings(): FileScanResultDto[] {
+    return (this.scanJob?.findings ?? []).filter((f) => f.verdict === 'ERROR');
+  }
+
+  /**
+   * True when a completed scan could not actually scan anything — every file
+   * came back with an error verdict. This is how the backend surfaces a
+   * disabled or unreachable scanner (each file yields an ERROR result), so the
+   * UI can show a clear "unavailable" message instead of a wall of errors.
+   */
+  get scanScannerUnavailable(): boolean {
+    const job = this.scanJob;
+    if (!job || job.status !== 'COMPLETED' || job.filesScanned <= 0) {
+      return false;
+    }
+    return (
+      job.infectedCount === 0 &&
+      this.scanErroredFindings.length === job.filesScanned
+    );
+  }
+
+  get scanUnavailableMessage(): string {
+    const disabled = this.scanErroredFindings.some((f) =>
+      (f.detail ?? '').toLowerCase().includes('disabled'),
+    );
+    return disabled
+      ? 'Virus scanning is turned off on the server, so nothing was scanned.'
+      : 'The virus scanner is currently unavailable, so nothing was scanned. Please try again later.';
+  }
+
+  get scanNoThreats(): boolean {
+    const job = this.scanJob;
+    return (
+      !!job &&
+      job.status === 'COMPLETED' &&
+      job.infectedCount === 0 &&
+      !this.scanScannerUnavailable
+    );
   }
 
   navigateToFolder(folderPath?: string) {
