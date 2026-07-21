@@ -2,6 +2,7 @@ import { CommonModule } from '@angular/common';
 import {
   Component,
   ElementRef,
+  HostListener,
   OnDestroy,
   OnInit,
   ViewChild,
@@ -88,6 +89,8 @@ export class CloudComponent implements OnInit, OnDestroy {
   editingFile: FileDto | null = null;
   newFileName = '';
   fileContent = '';
+  // The content as last loaded/saved — the editor is "dirty" when fileContent diverges.
+  originalFileContent = '';
   editorMode: 'edit' | 'preview' | 'split' = 'edit';
   previewHtml: SafeHtml = '';
 
@@ -687,6 +690,7 @@ export class CloudComponent implements OnInit, OnDestroy {
     this.editingFile = null;
     this.newFileName = '';
     this.fileContent = '';
+    this.originalFileContent = '';
     this.editorMode = 'edit';
     this.previewHtml = '';
     this.showFileEditor = true;
@@ -737,6 +741,7 @@ export class CloudComponent implements OnInit, OnDestroy {
     this.cloudService.getFileContent(relativePath).subscribe({
       next: (content) => {
         this.fileContent = content;
+        this.originalFileContent = content;
         this.editorMode = 'edit';
         this.updatePreview();
         this.showFileEditor = true;
@@ -1019,8 +1024,59 @@ export class CloudComponent implements OnInit, OnDestroy {
     this.editingFile = null;
     this.newFileName = '';
     this.fileContent = '';
+    this.originalFileContent = '';
     this.editorMode = 'edit';
     this.previewHtml = '';
+  }
+
+  /** True while the editor is open with edits that have not been saved. */
+  get isEditorDirty(): boolean {
+    return this.showFileEditor && this.fileContent !== this.originalFileContent;
+  }
+
+  /**
+   * Close the editor, but if there are unsaved edits ask first. Used by the
+   * Cancel button and by the dialog's dismiss paths so no exit silently drops
+   * changes.
+   */
+  requestCloseFileEditor(): void {
+    if (!this.isEditorDirty) {
+      this.closeFileEditor();
+      return;
+    }
+    this.confirmationService.confirm({
+      header: 'Unsaved changes',
+      message: 'Exit without saving? Your changes will be lost.',
+      icon: 'pi pi-exclamation-triangle',
+      acceptLabel: 'Discard',
+      rejectLabel: 'Keep editing',
+      acceptButtonStyleClass: 'p-button-danger p-button-sm',
+      rejectButtonStyleClass: 'p-button-text p-button-sm',
+      accept: () => this.closeFileEditor(),
+    });
+  }
+
+  /**
+   * The dialog was dismissed (the header close button, Esc, or a mask click),
+   * which the two-way visible binding has already flipped off. Reverse it and
+   * route through the same guard so a dismiss can't bypass the prompt.
+   */
+  onFileEditorHide(): void {
+    if (this.fileContent === this.originalFileContent) {
+      this.closeFileEditor();
+      return;
+    }
+    this.showFileEditor = true;
+    this.requestCloseFileEditor();
+  }
+
+  /** Native guard for a full-page leave (reload, tab close, external navigation). */
+  @HostListener('window:beforeunload', ['$event'])
+  warnBeforeUnload(event: BeforeUnloadEvent): void {
+    if (this.isEditorDirty) {
+      event.preventDefault();
+      event.returnValue = '';
+    }
   }
 
   openCreateShareDialog(filePath: string, fileName: string) {
