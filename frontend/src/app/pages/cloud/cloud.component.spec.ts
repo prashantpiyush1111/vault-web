@@ -388,3 +388,109 @@ describe('CloudComponent Secure Send Flow', () => {
     );
   });
 });
+
+/**
+ * The unsaved-changes guard on the Cloud file editor: every exit path (Cancel,
+ * the dialog dismiss, and a full-page leave) must confirm before discarding
+ * edits, and a clean editor must close without a prompt.
+ */
+describe('CloudComponent unsaved-edit guard', () => {
+  let component: CloudComponent;
+  let confirmMock: jasmine.SpyObj<{ confirm: (config: unknown) => void }>;
+
+  beforeEach(() => {
+    confirmMock = jasmine.createSpyObj('ConfirmationService', ['confirm']);
+    component = new CloudComponent(
+      {} as never,
+      confirmMock as never,
+      {} as never,
+      {} as never,
+      {} as never,
+    );
+  });
+
+  // Open the editor on a file whose loaded state is not yet dirty.
+  function openEditor(content: string, fileName = 'note.txt'): void {
+    component.showFileEditor = true;
+    component.newFileName = fileName;
+    component.originalFileName = fileName;
+    component.fileContent = content;
+    component.originalFileContent = content;
+  }
+
+  function acceptLastConfirm(): void {
+    const config = confirmMock.confirm.calls.mostRecent().args[0] as {
+      accept: () => void;
+    };
+    config.accept();
+  }
+
+  it('closes without asking when the editor has no unsaved edits', () => {
+    openEditor('hello');
+    component.requestCloseFileEditor();
+    expect(confirmMock.confirm).not.toHaveBeenCalled();
+    expect(component.showFileEditor).toBeFalse();
+  });
+
+  it('asks before discarding, and only closes once Discard is confirmed', () => {
+    openEditor('hello');
+    component.fileContent = 'hello world'; // dirty
+
+    component.requestCloseFileEditor();
+    expect(confirmMock.confirm).toHaveBeenCalledTimes(1);
+    expect(component.showFileEditor).toBeTrue(); // stays open until confirmed
+
+    acceptLastConfirm();
+    expect(component.showFileEditor).toBeFalse();
+    expect(component.fileContent).toBe(''); // editor state fully reset
+  });
+
+  it('asks before discarding when only the file name changed', () => {
+    openEditor('hello', 'old.txt');
+    component.newFileName = 'new.txt';
+
+    component.requestCloseFileEditor();
+
+    expect(confirmMock.confirm).toHaveBeenCalledTimes(1);
+    expect(component.showFileEditor).toBeTrue();
+  });
+
+  it('reverses a dialog dismiss and confirms when there are unsaved edits', () => {
+    openEditor('hello');
+    component.fileContent = 'changed';
+    component.showFileEditor = false; // the dismiss already flipped visible off
+
+    component.onFileEditorHide();
+
+    expect(component.showFileEditor).toBeTrue(); // reopened
+    expect(confirmMock.confirm).toHaveBeenCalledTimes(1);
+  });
+
+  it('lets a clean dialog dismiss close with no prompt', () => {
+    openEditor('hello');
+    component.showFileEditor = false;
+
+    component.onFileEditorHide();
+
+    expect(confirmMock.confirm).not.toHaveBeenCalled();
+    expect(component.showFileEditor).toBeFalse();
+  });
+
+  it('blocks a full-page leave only while there are unsaved edits', () => {
+    openEditor('hello');
+    const clean = {
+      preventDefault: jasmine.createSpy('preventDefault'),
+      returnValue: '',
+    } as unknown as BeforeUnloadEvent;
+    component.warnBeforeUnload(clean);
+    expect(clean.preventDefault).not.toHaveBeenCalled();
+
+    component.fileContent = 'changed';
+    const dirty = {
+      preventDefault: jasmine.createSpy('preventDefault'),
+      returnValue: '',
+    } as unknown as BeforeUnloadEvent;
+    component.warnBeforeUnload(dirty);
+    expect(dirty.preventDefault).toHaveBeenCalled();
+  });
+});
