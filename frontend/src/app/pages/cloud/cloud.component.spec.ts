@@ -409,9 +409,11 @@ describe('CloudComponent unsaved-edit guard', () => {
     );
   });
 
-  // Open the editor on a file whose loaded content is `content` (not yet dirty).
-  function openEditor(content: string): void {
+  // Open the editor on a file whose loaded state is not yet dirty.
+  function openEditor(content: string, fileName = 'note.txt'): void {
     component.showFileEditor = true;
+    component.newFileName = fileName;
+    component.originalFileName = fileName;
     component.fileContent = content;
     component.originalFileContent = content;
   }
@@ -441,6 +443,16 @@ describe('CloudComponent unsaved-edit guard', () => {
     acceptLastConfirm();
     expect(component.showFileEditor).toBeFalse();
     expect(component.fileContent).toBe(''); // editor state fully reset
+  });
+
+  it('asks before discarding when only the file name changed', () => {
+    openEditor('hello', 'old.txt');
+    component.newFileName = 'new.txt';
+
+    component.requestCloseFileEditor();
+
+    expect(confirmMock.confirm).toHaveBeenCalledTimes(1);
+    expect(component.showFileEditor).toBeTrue();
   });
 
   it('reverses a dialog dismiss and confirms when there are unsaved edits', () => {

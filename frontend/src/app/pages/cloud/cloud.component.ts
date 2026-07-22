@@ -89,7 +89,8 @@ export class CloudComponent implements OnInit, OnDestroy {
   editingFile: FileDto | null = null;
   newFileName = '';
   fileContent = '';
-  // The content as last loaded/saved — the editor is "dirty" when fileContent diverges.
+  // The editor state as last loaded or saved.
+  originalFileName = '';
   originalFileContent = '';
   editorMode: 'edit' | 'preview' | 'split' = 'edit';
   previewHtml: SafeHtml = '';
@@ -690,6 +691,7 @@ export class CloudComponent implements OnInit, OnDestroy {
     this.editingFile = null;
     this.newFileName = '';
     this.fileContent = '';
+    this.originalFileName = '';
     this.originalFileContent = '';
     this.editorMode = 'edit';
     this.previewHtml = '';
@@ -736,6 +738,7 @@ export class CloudComponent implements OnInit, OnDestroy {
 
     this.editingFile = file;
     this.newFileName = file.name;
+    this.originalFileName = file.name;
     const relativePath = this.getRelativePath(file.path);
 
     this.cloudService.getFileContent(relativePath).subscribe({
@@ -1024,6 +1027,7 @@ export class CloudComponent implements OnInit, OnDestroy {
     this.editingFile = null;
     this.newFileName = '';
     this.fileContent = '';
+    this.originalFileName = '';
     this.originalFileContent = '';
     this.editorMode = 'edit';
     this.previewHtml = '';
@@ -1031,7 +1035,14 @@ export class CloudComponent implements OnInit, OnDestroy {
 
   /** True while the editor is open with edits that have not been saved. */
   get isEditorDirty(): boolean {
-    return this.showFileEditor && this.fileContent !== this.originalFileContent;
+    return this.showFileEditor && this.hasUnsavedEditorChanges();
+  }
+
+  private hasUnsavedEditorChanges(): boolean {
+    return (
+      this.fileContent !== this.originalFileContent ||
+      this.newFileName !== this.originalFileName
+    );
   }
 
   /**
@@ -1040,7 +1051,7 @@ export class CloudComponent implements OnInit, OnDestroy {
    * changes.
    */
   requestCloseFileEditor(): void {
-    if (!this.isEditorDirty) {
+    if (!this.hasUnsavedEditorChanges()) {
       this.closeFileEditor();
       return;
     }
@@ -1062,7 +1073,7 @@ export class CloudComponent implements OnInit, OnDestroy {
    * route through the same guard so a dismiss can't bypass the prompt.
    */
   onFileEditorHide(): void {
-    if (this.fileContent === this.originalFileContent) {
+    if (!this.hasUnsavedEditorChanges()) {
       this.closeFileEditor();
       return;
     }
