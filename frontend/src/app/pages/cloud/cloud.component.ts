@@ -28,6 +28,7 @@ import { FolderContentItemDto } from '../../models/dtos/FolderContentItemDto';
 import { SearchResultDto } from '../../models/dtos/SearchResultDto';
 import { ScanJobDto } from '../../models/dtos/ScanJobDto';
 import { FileScanResultDto } from '../../models/dtos/FileScanResultDto';
+import { SecureSendLinkDto } from '../../models/dtos/SecureSendLinkDto';
 import { CloudService } from '../../services/cloud.service';
 import { finalize, firstValueFrom } from 'rxjs';
 import { UiToastService } from '../../core/services/ui-toast.service';
@@ -93,6 +94,26 @@ export class CloudComponent implements OnInit, OnDestroy {
   showCreateFolderDialog = false;
   showRenameFolderDialog = false;
   showRenameFileDialog = false;
+  showCreateShareDialog = false;
+  showGeneratedLinkDialog = false;
+  showSharedLinksDialog = false;
+
+  selectedFileForShare: { path: string; name: string } | null = null;
+  shareExpiryMinutes = 1440;
+  sharePassword = '';
+  createdShareUrl = '';
+  creatingShareLink = false;
+  sharedLinks: SecureSendLinkDto[] = [];
+  loadingSharedLinks = false;
+  revokingLinkId: string | null = null;
+
+  expiryOptions = [
+    { label: '1 Hour', value: 60 },
+    { label: '1 Day', value: 1440 },
+    { label: '7 Days', value: 10080 },
+    { label: '30 Days', value: 43200 },
+  ];
+
   newFolderName = '';
   renameFolderName = '';
   renameFileName = '';
@@ -1000,6 +1021,111 @@ export class CloudComponent implements OnInit, OnDestroy {
     this.fileContent = '';
     this.editorMode = 'edit';
     this.previewHtml = '';
+  }
+
+  openCreateShareDialog(filePath: string, fileName: string) {
+    this.selectedFileForShare = { path: filePath, name: fileName };
+    this.shareExpiryMinutes = 1440;
+    this.sharePassword = '';
+    this.showCreateShareDialog = true;
+  }
+
+  submitCreateShareLink() {
+    if (!this.selectedFileForShare) return;
+
+    this.creatingShareLink = true;
+    const { path, name } = this.selectedFileForShare;
+
+    this.cloudService
+      .createSecureSendLink(
+        path,
+        Number(this.shareExpiryMinutes),
+        this.sharePassword,
+      )
+      .pipe(finalize(() => (this.creatingShareLink = false)))
+      .subscribe({
+        next: (link) => {
+          this.createdShareUrl = link.shareUrl || '';
+          this.showCreateShareDialog = false;
+          this.showGeneratedLinkDialog = true;
+          this.toast.success(
+            'Share link created',
+            `Link for "${name}" created successfully.`,
+          );
+        },
+        error: (err: unknown) => {
+          const status = (err as { status?: number })?.status;
+          if (status === 429) {
+            this.toast.error(
+              'Rate limit reached',
+              'Too many share links created. Please wait before trying again.',
+            );
+          } else {
+            this.toast.error(
+              'Share failed',
+              this.getErrorMessage(err) || 'Could not create share link.',
+            );
+          }
+        },
+      });
+  }
+
+  copyShareUrlToClipboard() {
+    if (!this.createdShareUrl) return;
+    navigator.clipboard.writeText(this.createdShareUrl).then(
+      () => {
+        this.toast.success('Copied!', 'Share link copied to clipboard.');
+      },
+      () => {
+        this.toast.error('Copy failed', 'Please manually copy the URL.');
+      },
+    );
+  }
+
+  openSharedLinksDialog() {
+    this.showSharedLinksDialog = true;
+    this.loadSharedLinks();
+  }
+
+  loadSharedLinks() {
+    this.loadingSharedLinks = true;
+    this.cloudService
+      .listSecureSendLinks()
+      .pipe(finalize(() => (this.loadingSharedLinks = false)))
+      .subscribe({
+        next: (links) => {
+          this.sharedLinks = links;
+        },
+        error: (err) => {
+          this.toast.error(
+            'Error loading links',
+            this.getErrorMessage(err) || 'Could not fetch active share links.',
+          );
+        },
+      });
+  }
+
+  revokeShareLink(link: SecureSendLinkDto) {
+    this.revokingLinkId = link.id;
+    this.cloudService
+      .revokeSecureSendLink(link.id)
+      .pipe(finalize(() => (this.revokingLinkId = null)))
+      .subscribe({
+        next: () => {
+          link.isRevoked = true;
+          link.revokedAt = new Date().toISOString();
+          this.toast.success(
+            'Link revoked',
+            `Share link for "${link.fileName}" was revoked.`,
+          );
+        },
+        error: (err) => {
+          this.toast.error(
+            'Revocation failed',
+            this.getErrorMessage(err) || 'Could not revoke share link.',
+          );
+        },
+      });
   }
 
   isMarkdownFile(fileName: string): boolean {
