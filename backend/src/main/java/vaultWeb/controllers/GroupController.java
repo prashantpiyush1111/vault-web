@@ -13,6 +13,7 @@ import vaultWeb.dtos.DeviceDto;
 import vaultWeb.dtos.GroupDto;
 import vaultWeb.dtos.GroupResponseDto;
 import vaultWeb.exceptions.UnauthorizedException;
+import vaultWeb.exceptions.notfound.GroupNotFoundException;
 import vaultWeb.exceptions.notfound.NotMemberException;
 import vaultWeb.models.ChatMessage;
 import vaultWeb.models.Group;
@@ -71,11 +72,17 @@ public class GroupController {
       responseCode = "401",
       description = "Unauthorized request. You must provide an authentication token.")
   @ApiResponse(responseCode = "404", description = "Group was not found.")
-  public ResponseEntity<GroupResponseDto> getGroupById(@PathVariable Long id) {
+  public ResponseEntity<GroupResponseDto> getGroupById(
+      @PathVariable Long id, Authentication authentication) {
     return groupService
         .getGroupById(id)
-        .map(GroupResponseDto::from)
-        .map(ResponseEntity::ok)
+        .map(
+            group -> {
+              if (!Boolean.TRUE.equals(group.getIsPublic())) {
+                getAuthenticatedGroupMember(id, authentication);
+              }
+              return ResponseEntity.ok(GroupResponseDto.from(group));
+            })
         .orElse(ResponseEntity.notFound().build());
   }
 
@@ -91,8 +98,19 @@ public class GroupController {
   @ApiResponse(
       responseCode = "401",
       description = "Unauthorized request. You must provide an authentication token.")
-  public ResponseEntity<List<User>> getGroupMembers(@PathVariable Long id) {
-    List<User> members = groupService.getMembers(id);
+  public ResponseEntity<List<User>> getGroupMembers(
+      @PathVariable Long id, Authentication authentication) {
+    Group group =
+        groupService
+            .getGroupById(id)
+            .orElseThrow(() -> new GroupNotFoundException("Group not found with id: " + id));
+
+    if (!Boolean.TRUE.equals(group.getIsPublic())) {
+      getAuthenticatedGroupMember(id, authentication);
+    }
+
+    List<User> members =
+        groupMemberRepository.findAllByGroup(group).stream().map(gm -> gm.getUser()).toList();
     return ResponseEntity.ok(members);
   }
 
