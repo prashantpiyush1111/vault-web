@@ -284,8 +284,7 @@ class GroupControllerTest {
   @Test
   void shouldFailGetMembers_WhenGroupNotFound() {
     when(groupService.getGroupById(999L)).thenReturn(Optional.empty());
-    assertThrows(
-        GroupNotFoundException.class, () -> groupController.getGroupMembers(999L, null));
+    assertThrows(GroupNotFoundException.class, () -> groupController.getGroupMembers(999L, null));
     verify(groupService, times(1)).getGroupById(999L);
   }
 
