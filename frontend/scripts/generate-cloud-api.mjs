@@ -22,7 +22,8 @@ const outputPath = resolve(
   process.env.CLOUD_OPENAPI_OUTPUT ?? "src/app/api/generated/cloud",
 );
 const configPath = resolve(frontendRoot, "openapi/cloud-generator-config.yaml");
-const generatorImage = "openapitools/openapi-generator-cli@sha256:a304ddf1e2e5f24f68fa3153568d6174cea4959d09aa8e3db6d526fd0782326d";
+const generatorImage =
+  "openapitools/openapi-generator-cli@sha256:a304ddf1e2e5f24f68fa3153568d6174cea4959d09aa8e3db6d526fd0782326d";
 const checkOnly = process.argv.includes("--check");
 
 const relativeSpecPath = relative(frontendRoot, specPath);
