@@ -9,7 +9,7 @@ import {
   writeFileSync,
 } from "node:fs";
 import { tmpdir } from "node:os";
-import { join, resolve } from "node:path";
+import { join, relative, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
 const frontendRoot = resolve(fileURLToPath(new URL("..", import.meta.url)));
@@ -18,26 +18,36 @@ const fixturePath = join(
   "openapi/fixtures/cloud-generator-v1.yaml",
 );
 const generator = join(frontendRoot, "scripts/generate-cloud-api.mjs");
-const target = join(frontendRoot, "src/app/api/generated/cloud");
+
 const sandbox = mkdtempSync(join(tmpdir(), "cloud-api-fixture-"));
 const changedFixtureDirectory = mkdtempSync(
   join(frontendRoot, ".cloud-openapi-fixture-"),
 );
-const originalTarget = join(sandbox, "original-target");
+const target = join(changedFixtureDirectory, "generated-client");
 const snapshot = join(sandbox, "first-run");
-const env = { ...process.env, CLOUD_OPENAPI_SPEC: fixturePath };
+const env = {
+  ...process.env,
+  CLOUD_OPENAPI_SPEC: fixturePath,
+  CLOUD_OPENAPI_OUTPUT: relative(frontendRoot, target),
+};
 
-const run = (args, expectedStatus = 0) => {
+const run = (args, expectedStatus = 0, expectedOutput) => {
   const result = spawnSync(process.execPath, [generator, ...args], {
     cwd: frontendRoot,
     env,
-    stdio: "inherit",
+    encoding: "utf8",
   });
   if (result.error) throw result.error;
+  if (result.stdout) process.stdout.write(result.stdout);
+  if (result.stderr) process.stderr.write(result.stderr);
   if (result.status !== expectedStatus) {
     throw new Error(
       `Expected exit code ${expectedStatus}, got ${result.status}`,
     );
+  }
+  const output = `${result.stdout ?? ""}${result.stderr ?? ""}`;
+  if (expectedOutput && !output.includes(expectedOutput)) {
+    throw new Error(`Expected command output to include: ${expectedOutput}`);
   }
 };
 
@@ -66,11 +76,7 @@ const sameTree = (left, right) => {
 };
 
 try {
-  if (existsSync(target)) {
-    cpSync(target, originalTarget, { recursive: true });
-  }
   try {
-    rmSync(target, { recursive: true, force: true });
     run([]);
     cpSync(target, snapshot, { recursive: true });
 
@@ -86,7 +92,7 @@ try {
     writeFileSync(join(target, staleFile), "\n// intentionally stale\n", {
       flag: "a",
     });
-    run(["--check"], 1);
+    run(["--check"], 1, "Generated Cloud client is stale. Changed files:");
 
     const changedFixture = readFileSync(fixturePath, "utf8").replace(
       /  \/widgets\/\{id\}:\n[\s\S]*?(?=components:)/,
@@ -108,9 +114,6 @@ try {
     run(["--check"]);
   } finally {
     rmSync(target, { recursive: true, force: true });
-    if (existsSync(originalTarget)) {
-      cpSync(originalTarget, target, { recursive: true });
-    }
   }
 
   console.log("Cloud OpenAPI fixture generation regression test passed.");
