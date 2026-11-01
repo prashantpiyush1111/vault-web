@@ -17,12 +17,16 @@ const specPath = resolve(
   frontendRoot,
   process.env.CLOUD_OPENAPI_SPEC ?? "src/app/api/contracts/cloud/openapi.yaml",
 );
-const outputPath = resolve(frontendRoot, "src/app/api/generated/cloud");
+const outputPath = resolve(
+  frontendRoot,
+  process.env.CLOUD_OPENAPI_OUTPUT ?? "src/app/api/generated/cloud",
+);
 const configPath = resolve(frontendRoot, "openapi/cloud-generator-config.yaml");
-const generatorVersion = "v7.26.0";
+const generatorImage = "openapitools/openapi-generator-cli@sha256:a304ddf1e2e5f24f68fa3153568d6174cea4959d09aa8e3db6d526fd0782326d";
 const checkOnly = process.argv.includes("--check");
 
 const relativeSpecPath = relative(frontendRoot, specPath);
+const relativeOutputPath = relative(frontendRoot, outputPath);
 if (
   relativeSpecPath === ".." ||
   relativeSpecPath.startsWith(`..${sep}`) ||
@@ -30,6 +34,18 @@ if (
 ) {
   console.error(
     "CLOUD_OPENAPI_SPEC must point to a file inside the frontend directory because Docker mounts only that directory.",
+  );
+  process.exit(1);
+}
+
+if (
+  relativeOutputPath === "." ||
+  relativeOutputPath === ".." ||
+  relativeOutputPath.startsWith(`..${sep}`) ||
+  relativeOutputPath.startsWith("/")
+) {
+  console.error(
+    "CLOUD_OPENAPI_OUTPUT must point to a directory inside the frontend directory because Docker mounts only that directory.",
   );
   process.exit(1);
 }
@@ -68,7 +84,7 @@ const dockerArgs = [
   `${frontendRoot}:/local`,
   "-v",
   `${temporaryRoot}:/output`,
-  `openapitools/openapi-generator-cli:${generatorVersion}`,
+  generatorImage,
   "generate",
   "-g",
   "typescript-angular",
