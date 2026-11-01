@@ -96,7 +96,7 @@ try {
     }
     writeFileSync(
       join(target, staleFile),
-      "\\n// intentionally stale\\n",
+      "\n// intentionally stale\n",
       { flag: "a" },
     );
     run(["--check"], 1);
