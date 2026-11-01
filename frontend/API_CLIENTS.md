@@ -25,14 +25,15 @@ and pinned as part of the consumer update.
 
 - Generator: OpenAPI Generator `typescript-angular`
 - OpenAPI Generator CLI and generator release: `7.26.0`
-  (`openapitools/openapi-generator-cli:v7.26.0`)
+  (`openapitools/openapi-generator-cli@${digest}`; multi-platform image-index digest).
 - Angular target: `19.2.0`
 - TypeScript target: `5.7.2`
 - RxJS target: `7.8.1`
 - Zone.js target: `0.15.0`
 
-The Docker image release pins the CLI distribution and its bundled generator
-to the same version. The generator options are committed in
+The Docker image is pinned by its immutable multi-platform OCI image-index
+digest, not by a mutable tag. The index digest resolves to the platform-specific
+manifests while keeping the selected image content fixed. The generator options are committed in
 `openapi/cloud-generator-config.yaml`. Docker is required to run generation
 locally and in CI.
 
@@ -44,7 +45,9 @@ From `frontend/`:
 - `npm run api:check` regenerates into a temporary directory and fails if the
   checked-in generated output differs.
 
-Both commands require the provider contract at the path above. The check must
+The fixture regression test generates into an isolated temporary output directory;
+it never removes or rewrites the checked-in generated client. Both commands require
+the provider contract at the path above. The check must
 be added to frontend CI together with the first immutable contract pin, so the
 consumer CI never depends on an unversioned provider endpoint.
 
