@@ -3,11 +3,11 @@ import {
   existsSync,
   mkdirSync,
   mkdtempSync,
-  readdirSync,
   readFileSync,
+  readdirSync,
+  renameSync,
   rmSync,
 } from "node:fs";
-import { tmpdir } from "node:os";
 import { dirname, join, relative, resolve, sep } from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -22,12 +22,24 @@ const configPath = resolve(frontendRoot, "openapi/cloud-generator-config.yaml");
 const generatorVersion = "v7.26.0";
 const checkOnly = process.argv.includes("--check");
 
+const relativeSpecPath = relative(frontendRoot, specPath);
+if (
+  relativeSpecPath === ".." ||
+  relativeSpecPath.startsWith(`..${sep}`) ||
+  relativeSpecPath.startsWith("/")
+) {
+  console.error(
+    "CLOUD_OPENAPI_SPEC must point to a file inside the frontend directory because Docker mounts only that directory.",
+  );
+  process.exit(1);
+}
+
 if (!existsSync(specPath)) {
   console.error(
     [
       "Cloud OpenAPI contract is not available.",
       "Expected a revision-pinned provider export at:",
-      relative(frontendRoot, specPath),
+      relativeSpecPath,
       "Track the provider export prerequisite in:",
       "https://github.com/Vault-Web/cloud-page/issues/192",
       "Do not substitute a live /v3/api-docs endpoint or a mutable main/latest URL.",
@@ -40,12 +52,11 @@ if (!existsSync(configPath)) {
   throw new Error(`OpenAPI Generator config not found: ${configPath}`);
 }
 
-const temporaryRoot = checkOnly
-  ? mkdtempSync(join(tmpdir(), "vault-cloud-openapi-"))
-  : null;
-const targetPath = checkOnly ? join(temporaryRoot, "generated") : outputPath;
-
-mkdirSync(dirname(targetPath), { recursive: true });
+// Keep the temporary output on the same filesystem as the checked-in client so
+// the final directory swap works on Windows as well as Unix-like systems.
+const temporaryRoot = mkdtempSync(join(frontendRoot, ".cloud-openapi-"));
+const generatedPath = join(temporaryRoot, "generated");
+mkdirSync(generatedPath, { recursive: true });
 
 const dockerArgs = [
   "run",
@@ -53,20 +64,36 @@ const dockerArgs = [
   "-v",
   `${frontendRoot}:/local`,
   "-v",
-  `${temporaryRoot ?? frontendRoot}:/output`,
+  `${temporaryRoot}:/output`,
   `openapitools/openapi-generator-cli:${generatorVersion}`,
   "generate",
   "-g",
   "typescript-angular",
   "-i",
-  `/local/${relative(frontendRoot, specPath).split(sep).join("/")}`,
+  `/local/${relativeSpecPath.split(sep).join("/")}`,
   "-c",
   "/local/openapi/cloud-generator-config.yaml",
   "-o",
-  checkOnly ? "/output/generated" : "/local/src/app/api/generated/cloud",
+  "/output/generated",
   "--global-property",
   "apiTests=false,modelTests=false,apiDocs=false,modelDocs=false",
 ];
+
+const collectFiles = (root) => {
+  const files = [];
+  const visit = (directory) => {
+    for (const entry of readdirSync(directory, { withFileTypes: true })) {
+      const absolute = join(directory, entry.name);
+      if (entry.isDirectory()) {
+        visit(absolute);
+      } else if (entry.isFile()) {
+        files.push(relative(root, absolute).split(sep).join("/"));
+      }
+    }
+  };
+  visit(root);
+  return files.sort();
+};
 
 try {
   const result = spawnSync("docker", dockerArgs, {
@@ -79,6 +106,12 @@ try {
   }
   if (result.status !== 0) {
     process.exitCode = result.status ?? 1;
+  } else if (
+    !existsSync(generatedPath) ||
+    collectFiles(generatedPath).length === 0
+  ) {
+    console.error("OpenAPI Generator completed without producing client files.");
+    process.exitCode = 1;
   } else if (checkOnly) {
     if (!existsSync(outputPath)) {
       console.error(
@@ -86,30 +119,14 @@ try {
       );
       process.exitCode = 1;
     } else {
-      const collectFiles = (root) => {
-        const files = [];
-        const visit = (directory) => {
-          for (const entry of readdirSync(directory, { withFileTypes: true })) {
-            const absolute = join(directory, entry.name);
-            if (entry.isDirectory()) {
-              visit(absolute);
-            } else {
-              files.push(relative(root, absolute).split(sep).join("/"));
-            }
-          }
-        };
-        visit(root);
-        return files.sort();
-      };
-
       const expected = collectFiles(outputPath);
-      const actual = collectFiles(targetPath);
+      const actual = collectFiles(generatedPath);
       const changed = [...new Set([...expected, ...actual])].filter(
         (file) =>
           !existsSync(join(outputPath, file)) ||
-          !existsSync(join(targetPath, file)) ||
+          !existsSync(join(generatedPath, file)) ||
           !readFileSync(join(outputPath, file)).equals(
-            readFileSync(join(targetPath, file)),
+            readFileSync(join(generatedPath, file)),
           ),
       );
 
@@ -123,9 +140,33 @@ try {
         console.log("Generated Cloud client is up to date.");
       }
     }
+  } else {
+    const backupPath = `${outputPath}.backup-${process.pid}`;
+    let movedExistingOutput = false;
+
+    try {
+      mkdirSync(dirname(outputPath), { recursive: true });
+      if (existsSync(outputPath)) {
+        renameSync(outputPath, backupPath);
+        movedExistingOutput = true;
+      }
+
+      renameSync(generatedPath, outputPath);
+
+      if (movedExistingOutput) {
+        rmSync(backupPath, { recursive: true, force: true });
+      }
+    } catch (error) {
+      // Restore the previous generated client if installing the new one fails.
+      if (existsSync(outputPath)) {
+        rmSync(outputPath, { recursive: true, force: true });
+      }
+      if (movedExistingOutput && existsSync(backupPath)) {
+        renameSync(backupPath, outputPath);
+      }
+      throw error;
+    }
   }
 } finally {
-  if (temporaryRoot) {
-    rmSync(temporaryRoot, { recursive: true, force: true });
-  }
+  rmSync(temporaryRoot, { recursive: true, force: true });
 }
