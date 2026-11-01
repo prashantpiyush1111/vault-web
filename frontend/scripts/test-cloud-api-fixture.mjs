@@ -12,10 +12,21 @@ import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
-const frontendRoot = resolve(fileURLToPath(new URL("..", import.meta.url)));
-const fixturePath = join(frontendRoot, "openapi/fixtures/cloud-generator-v1.yaml");
-const generator = join(frontendRoot, "scripts/generate-cloud-api.mjs");
-const target = join(frontendRoot, "src/app/api/generated/cloud");
+const frontendRoot = resolve(
+  fileURLToPath(new URL("..", import.meta.url)),
+);
+const fixturePath = join(
+  frontendRoot,
+  "openapi/fixtures/cloud-generator-v1.yaml",
+);
+const generator = join(
+  frontendRoot,
+  "scripts/generate-cloud-api.mjs",
+);
+const target = join(
+  frontendRoot,
+  "src/app/api/generated/cloud",
+);
 const sandbox = mkdtempSync(join(tmpdir(), "cloud-api-fixture-"));
 const originalTarget = join(sandbox, "original-target");
 const snapshot = join(sandbox, "first-run");
@@ -29,7 +40,9 @@ const run = (args, expectedStatus = 0) => {
   });
   if (result.error) throw result.error;
   if (result.status !== expectedStatus) {
-    throw new Error(`Expected exit code ${expectedStatus}, got ${result.status}`);
+    throw new Error(
+      `Expected exit code ${expectedStatus}, got ${result.status}`,
+    );
   }
 };
 
@@ -39,7 +52,9 @@ const files = (directory) => {
     for (const entry of readdirSync(current, { withFileTypes: true })) {
       const path = join(current, entry.name);
       if (entry.isDirectory()) visit(path);
-      else if (entry.isFile()) found.push(path.slice(directory.length + 1));
+      else if (entry.isFile()) {
+        found.push(path.slice(directory.length + 1));
+      }
     }
   };
   visit(directory);
@@ -52,13 +67,17 @@ const sameTree = (left, right) => {
   return (
     JSON.stringify(leftFiles) === JSON.stringify(rightFiles) &&
     leftFiles.every((file) =>
-      readFileSync(join(left, file)).equals(readFileSync(join(right, file))),
+      readFileSync(join(left, file)).equals(
+        readFileSync(join(right, file)),
+      ),
     )
   );
 };
 
 try {
-  if (existsSync(target)) cpSync(target, originalTarget, { recursive: true });
+  if (existsSync(target)) {
+    cpSync(target, originalTarget, { recursive: true });
+  }
   try {
     rmSync(target, { recursive: true, force: true });
     run([]);
@@ -66,14 +85,20 @@ try {
 
     run([]);
     if (!sameTree(snapshot, target)) {
-      throw new Error("Repeated fixture generation produced different output.");
+      throw new Error(
+        "Repeated fixture generation produced different output.",
+      );
     }
 
     const staleFile = files(target)[0];
-    if (!staleFile) throw new Error("Fixture generation produced no files.");
-    writeFileSync(join(target, staleFile), "\n// intentionally stale\n", {
-      flag: "a",
-    });
+    if (!staleFile) {
+      throw new Error("Fixture generation produced no files.");
+    }
+    writeFileSync(
+      join(target, staleFile),
+      "\\n// intentionally stale\\n",
+      { flag: "a" },
+    );
     run(["--check"], 1);
 
     const changedFixture = readFileSync(fixturePath, "utf8").replace(
@@ -85,13 +110,21 @@ try {
     env.CLOUD_OPENAPI_SPEC = changedPath;
 
     run([]);
-    if (files(target).some((file) => file.toLowerCase().includes("getwidget"))) {
-      throw new Error("Regeneration retained the removed getWidget API file.");
+    if (
+      files(target).some((file) =>
+        file.toLowerCase().includes("getwidget"),
+      )
+    ) {
+      throw new Error(
+        "Regeneration retained the removed getWidget API file.",
+      );
     }
     run(["--check"]);
   } finally {
     rmSync(target, { recursive: true, force: true });
-    if (existsSync(originalTarget)) cpSync(originalTarget, target, { recursive: true });
+    if (existsSync(originalTarget)) {
+      cpSync(originalTarget, target, { recursive: true });
+    }
   }
 
   console.log("Cloud OpenAPI fixture generation regression test passed.");
