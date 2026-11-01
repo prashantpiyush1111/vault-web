@@ -61,6 +61,9 @@ mkdirSync(generatedPath, { recursive: true });
 const dockerArgs = [
   "run",
   "--rm",
+  ...(typeof process.getuid === "function"
+    ? ["--user", `${process.getuid()}:${process.getgid()}`]
+    : []),
   "-v",
   `${frontendRoot}:/local`,
   "-v",
@@ -110,7 +113,9 @@ try {
     !existsSync(generatedPath) ||
     collectFiles(generatedPath).length === 0
   ) {
-    console.error("OpenAPI Generator completed without producing client files.");
+    console.error(
+      "OpenAPI Generator completed without producing client files.",
+    );
     process.exitCode = 1;
   } else if (checkOnly) {
     if (!existsSync(outputPath)) {
