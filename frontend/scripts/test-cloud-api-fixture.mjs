@@ -20,6 +20,9 @@ const fixturePath = join(
 const generator = join(frontendRoot, "scripts/generate-cloud-api.mjs");
 const target = join(frontendRoot, "src/app/api/generated/cloud");
 const sandbox = mkdtempSync(join(tmpdir(), "cloud-api-fixture-"));
+const changedFixtureDirectory = mkdtempSync(
+  join(frontendRoot, ".cloud-openapi-fixture-"),
+);
 const originalTarget = join(sandbox, "original-target");
 const snapshot = join(sandbox, "first-run");
 const env = { ...process.env, CLOUD_OPENAPI_SPEC: fixturePath };
@@ -89,7 +92,7 @@ try {
       /  \/widgets\/\{id\}:\n[\s\S]*?(?=components:)/,
       "",
     );
-    const changedPath = join(sandbox, "cloud-generator-v2.yaml");
+    const changedPath = join(changedFixtureDirectory, "cloud-generator-v2.yaml");
     writeFileSync(changedPath, changedFixture);
     env.CLOUD_OPENAPI_SPEC = changedPath;
 
@@ -110,4 +113,5 @@ try {
   console.log("Cloud OpenAPI fixture generation regression test passed.");
 } finally {
   rmSync(sandbox, { recursive: true, force: true });
+  rmSync(changedFixtureDirectory, { recursive: true, force: true });
 }
