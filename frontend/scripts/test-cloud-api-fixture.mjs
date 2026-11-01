@@ -13,7 +13,10 @@ import { join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
 const frontendRoot = resolve(fileURLToPath(new URL("..", import.meta.url)));
-const fixturePath = join(frontendRoot, "openapi/fixtures/cloud-generator-v1.yaml");
+const fixturePath = join(
+  frontendRoot,
+  "openapi/fixtures/cloud-generator-v1.yaml",
+);
 const generator = join(frontendRoot, "scripts/generate-cloud-api.mjs");
 const target = join(frontendRoot, "src/app/api/generated/cloud");
 const sandbox = mkdtempSync(join(tmpdir(), "cloud-api-fixture-"));
@@ -77,11 +80,9 @@ try {
     if (!staleFile) {
       throw new Error("Fixture generation produced no files.");
     }
-    writeFileSync(
-      join(target, staleFile),
-      "\n// intentionally stale\n",
-      { flag: "a" },
-    );
+    writeFileSync(join(target, staleFile), "\n// intentionally stale\n", {
+      flag: "a",
+    });
     run(["--check"], 1);
 
     const changedFixture = readFileSync(fixturePath, "utf8").replace(
@@ -93,7 +94,9 @@ try {
     env.CLOUD_OPENAPI_SPEC = changedPath;
 
     run([]);
-    if (files(target).some((file) => file.toLowerCase().includes("getwidget"))) {
+    if (
+      files(target).some((file) => file.toLowerCase().includes("getwidget"))
+    ) {
       throw new Error("Regeneration retained the removed getWidget API file.");
     }
     run(["--check"]);
