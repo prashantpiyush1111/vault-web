@@ -92,7 +92,10 @@ try {
       /  \/widgets\/\{id\}:\n[\s\S]*?(?=components:)/,
       "",
     );
-    const changedPath = join(changedFixtureDirectory, "cloud-generator-v2.yaml");
+    const changedPath = join(
+      changedFixtureDirectory,
+      "cloud-generator-v2.yaml",
+    );
     writeFileSync(changedPath, changedFixture);
     env.CLOUD_OPENAPI_SPEC = changedPath;
 
