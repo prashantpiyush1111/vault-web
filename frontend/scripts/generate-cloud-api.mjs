@@ -162,12 +162,15 @@ try {
         rmSync(backupPath, { recursive: true, force: true });
       }
     } catch (error) {
-      // Restore the previous generated client if installing the new one fails.
-      if (existsSync(outputPath)) {
-        rmSync(outputPath, { recursive: true, force: true });
-      }
-      if (movedExistingOutput && existsSync(backupPath)) {
-        renameSync(backupPath, outputPath);
+      // Only remove the output when the previous client was backed up.
+      // If the initial backup rename failed, the original output is still in place.
+      if (movedExistingOutput) {
+        if (existsSync(outputPath)) {
+          rmSync(outputPath, { recursive: true, force: true });
+        }
+        if (existsSync(backupPath)) {
+          renameSync(backupPath, outputPath);
+        }
       }
       throw error;
     }
